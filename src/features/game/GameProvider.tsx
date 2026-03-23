@@ -75,7 +75,7 @@ export const GameProvider: React.FC<React.PropsWithChildren> = ({
       window.removeEventListener("pushstate", handleRouteChange);
       window.removeEventListener("replacestate", handleRouteChange);
     };
-  }, [gameService?.state?.value]);
+  }, [gameService, gameService?.state?.value]);
 
   const [shortcuts, setShortcuts] =
     useState<InventoryItemName[]>(getShortcuts());
@@ -149,10 +149,15 @@ export const GameProvider: React.FC<React.PropsWithChildren> = ({
 
 export const useGame = () => {
   const context = React.useContext(Context);
-  const [gameState] = useActor(context.gameService);
 
   if (!context) {
     throw new Error("useAuth must be used within an GameProvider");
+  }
+
+  const [gameState] = useActor(context.gameService!);
+
+  if (!context.gameService) {
+    return { gameState: undefined, gameService: undefined };
   }
 
   return { gameState, gameService: context.gameService };

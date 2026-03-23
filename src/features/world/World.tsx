@@ -65,15 +65,15 @@ export const World: React.FC<Props> = ({ isCommunity = false }) => {
   );
 };
 
-const _isLoading = (state: MachineState) => state.matches("loading");
+const _isLoading = (state: any) => state?.matches?.("loading") ?? false;
 
 // MMO Machine
-const _isConnected = (state: MMOMachineState) => state.matches("connected");
-const _isKicked = (state: MMOMachineState) => state.matches("kicked");
-const _isMMOInitialising = (state: MMOMachineState) =>
-  state.matches("initialising");
-const _isIntroducing = (state: MMOMachineState) =>
-  state.matches("introduction");
+const _isConnected = (state: any) => state?.matches?.("connected") ?? false;
+const _isKicked = (state: any) => state?.matches?.("kicked") ?? false;
+const _isMMOInitialising = (state: any) =>
+  state?.matches?.("initialising") ?? false;
+const _isIntroducing = (state: any) =>
+  state?.matches?.("introduction") ?? false;
 
 type MMOProps = { isCommunity: boolean };
 
@@ -108,6 +108,7 @@ const SCENE_ACCESS: Partial<Record<SceneId, (game: GameState) => boolean>> = {
     const level = getBumpkinLevel(game.bumpkin?.experience ?? 0);
     return level >= 5;
   },
+  "casino-island": () => true, // Allow all players for now
 };
 
 export const MMO: React.FC<MMOProps> = ({ isCommunity }) => {
@@ -232,6 +233,11 @@ export const TravelScreen: React.FC<TravelProps> = ({ mmoService }) => {
   const isConnected = useSelector(mmoService, _isConnected);
   const isKicked = useSelector(mmoService, _isKicked);
 
+  // Guard: don't render until mmoService is ready
+  if (!mmoService) {
+    return null;
+  }
+
   // Return kicked
   if (isKicked) {
     return (
@@ -270,7 +276,13 @@ export const TravelScreen: React.FC<TravelProps> = ({ mmoService }) => {
 export const Explore: React.FC = () => {
   const { gameService } = useContext(Context);
   const { isCommunity } = useContext(WorldContext);
-  const isLoading = useSelector(gameService, _isLoading);
+  
+  const isLoading = useSelector(gameService!, _isLoading);
+  
+  // Guard: don't render until gameService is ready
+  if (!gameService) {
+    return null;
+  }
 
   return (
     <div

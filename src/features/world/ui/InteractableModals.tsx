@@ -50,6 +50,7 @@ import { LoveIslandNoticeboard } from "./loveRewardShop/LoveIslandNoticeboard";
 import { Rarecrows } from "./Rarecrows";
 import { ChapterRaffles } from "./chapterRaffles/ChapterRaffles";
 import { FreeTrial } from "./FreeTrial";
+import { DailyChipsReward } from "./chests/DailyChipsReward";
 
 type InteractableName =
   | "guardian"
@@ -155,7 +156,12 @@ type InteractableName =
   | "event_noticeboard"
   | "holiday_puzzle"
   | "chapter_raffles"
-  | "free_trial";
+  | "free_trial"
+  | "casino_island_roulette"
+  | "casino_island_blackjack"
+  | "casino_island_poker"
+  | "casino_island_slots"
+  | "casino_island_daily_chest";
 
 class InteractableModalManager {
   private listener?: (name: InteractableName, isOpen: boolean) => void;
@@ -929,6 +935,35 @@ export const InteractableModals: React.FC<Props> = ({ id, scene }) => {
       </Modal>
       <Modal show={interactable === "event_noticeboard"} onHide={closeModal}>
         <EventNoticeboard onClose={closeModal} />
+      </Modal>
+
+      {/* Casino Island Modals - Placeholder */}
+      <Modal show={interactable === "casino_island_roulette"} onHide={closeModal}>
+        <CloseButtonPanel onClose={closeModal} title="Roulette">
+          {/* eslint-disable-next-line react/jsx-no-literals */}
+          <div className="p-4">Coming Soon</div>
+        </CloseButtonPanel>
+      </Modal>
+      <Modal show={interactable === "casino_island_blackjack"} onHide={closeModal}>
+        <CloseButtonPanel onClose={closeModal} title="Blackjack">
+          {/* eslint-disable-next-line react/jsx-no-literals */}
+          <div className="p-4">Coming Soon</div>
+        </CloseButtonPanel>
+      </Modal>
+      <Modal show={interactable === "casino_island_poker"} onHide={closeModal}>
+        <CloseButtonPanel onClose={closeModal} title="Poker">
+          {/* eslint-disable-next-line react/jsx-no-literals */}
+          <div className="p-4">Coming Soon</div>
+        </CloseButtonPanel>
+      </Modal>
+      <Modal show={interactable === "casino_island_slots"} onHide={closeModal}>
+        <CloseButtonPanel onClose={closeModal} title="Slots">
+          {/* eslint-disable-next-line react/jsx-no-literals */}
+          <div className="p-4">Coming Soon</div>
+        </CloseButtonPanel>
+      </Modal>
+      <Modal show={interactable === "casino_island_daily_chest"} onHide={closeModal}>
+        <DailyChipsReward onClose={closeModal} />
       </Modal>
     </>
   );

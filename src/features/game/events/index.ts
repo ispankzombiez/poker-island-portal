@@ -275,6 +275,10 @@ import {
   ClaimMinigamePrizeAction,
 } from "./minigames/claimMinigamePrize";
 import {
+  claimDailyChips,
+  ClaimDailyChipsAction,
+} from "./minigames/claimDailyChips";
+import {
   supplyCropMachine,
   SupplyCropMachineAction,
 } from "./landExpansion/supplyCropMachine";
@@ -693,6 +697,7 @@ export type PlayingEvent =
   | ExchangeSFLtoCoinsAction
   | DrillOilReserveAction
   | ClaimMinigamePrizeAction
+  | ClaimDailyChipsAction
   | PurchaseMinigameAction
   | StartMinigameAttemptAction
   | SubmitMinigameScoreAction
@@ -889,6 +894,7 @@ export const PLAYING_EVENTS: Handlers<PlayingEvent> = {
   "greenhouse.planted": plantGreenhouse,
   "minigame.itemPurchased": purchaseMinigameItem,
   "minigame.prizeClaimed": claimMinigamePrize,
+  "dailyChips.claimed": claimDailyChips,
   "minigame.attemptStarted": startMinigameAttempt,
   "minigame.scoreSubmitted": submitMinigameScore,
   "airdrop.claimed": claimAirdrop,

@@ -61,6 +61,7 @@ import { StreamScene } from "./scenes/StreamScene";
 import { LoveIslandScene } from "./scenes/LoveIslandScene";
 import { hasFeatureAccess } from "lib/flags";
 import { WorldHud } from "features/island/hud/WorldHud";
+import { CasinoIslandScene } from "features/portal/example/CasinoIslandScene";
 import { PlayerModal } from "features/social/PlayerModal";
 import { MachineState as GameMachineState } from "features/game/lib/gameMachine";
 import { RewardModal } from "features/social/RewardModal";
@@ -69,8 +70,8 @@ import { Discovery } from "features/social/Discovery";
 import { SPAWNS } from "./lib/spawn";
 import { PlayerInteractionMenu } from "./ui/player/PlayerInteractionMenu";
 
-const _roomState = (state: MachineState) => state.value;
-const _scene = (state: MachineState) => state.context.sceneId;
+const _roomState = (state: any) => state?.value;
+const _scene = (state: any) => state?.context?.sceneId;
 
 const _rawToken = (state: AuthMachineState) =>
   state.context.user.rawToken ?? "";
@@ -110,9 +111,9 @@ interface Props {
   route: SceneId;
 }
 
-const _loggedInFarmId = (state: GameMachineState) =>
-  state.context.visitorId ? state.context.visitorId : state.context.farmId;
-const _state = (state: GameMachineState) => state.context.state;
+const _loggedInFarmId = (state: any) =>
+  state?.context?.visitorId ? state?.context?.visitorId : state?.context?.farmId;
+const _state = (state: any) => state?.context?.state;
 
 export const PhaserComponent: React.FC<Props> = ({ mmoService, route }) => {
   const { t } = useAppTranslation();
@@ -121,8 +122,8 @@ export const PhaserComponent: React.FC<Props> = ({ mmoService, route }) => {
   const { gameService, selectedItem, shortcutItem } = useContext(Context);
   const { toastsList } = useContext(ToastContext);
 
-  const loggedInFarmId = useSelector(gameService, _loggedInFarmId);
-  const state = useSelector(gameService, _state);
+  const loggedInFarmId = useSelector(gameService!, _loggedInFarmId);
+  const state = useSelector(gameService!, _state);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -139,6 +140,11 @@ export const PhaserComponent: React.FC<Props> = ({ mmoService, route }) => {
   const scene = useSelector(mmoService, _scene);
   const rawToken = useSelector(authService, _rawToken);
 
+  // Guard: don't render until services are ready
+  if (!gameService || !mmoService) {
+    return null;
+  }
+
   const scenes = [
     Preloader,
     BeachScene,
@@ -154,6 +160,7 @@ export const PhaserComponent: React.FC<Props> = ({ mmoService, route }) => {
     InfernosScene,
     StreamScene,
     LoveIslandScene,
+    CasinoIslandScene,
   ];
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import Decimal from "decimal.js-light";
 import flowerIcon from "assets/icons/flower_token.webp";
 import coinsIcon from "assets/icons/coins.webp";
 import gemIcon from "assets/icons/gem.webp";
+import chipIcon from "assets/icons/chip.png";
 
 import { formatNumber } from "lib/utils/formatNumber";
 import { SUNNYSIDE } from "assets/sunnyside";
@@ -14,10 +15,11 @@ interface Props {
   sfl: Decimal;
   coins: number;
   gems: Decimal;
+  chips?: Decimal;
   onClick?: () => void;
 }
 
-export const Balances: React.FC<Props> = ({ sfl, coins, gems, onClick }) => {
+export const Balances: React.FC<Props> = ({ sfl, coins, gems, chips, onClick }) => {
   const { isVisiting } = useVisiting();
   const [showFullBalance, setShowFullBalance] = useState(false);
 
@@ -51,6 +53,19 @@ export const Balances: React.FC<Props> = ({ sfl, coins, gems, onClick }) => {
               }}
             />
           </div>
+          {chips !== undefined && (
+            <div className="flex items-center space-x-2">
+              <span className="balance-text mt-0.5">{formatNumber(chips)}</span>
+              <img
+                src={chipIcon}
+                alt="Chips"
+                style={{
+                  width: 25,
+                  height: 25,
+                }}
+              />
+            </div>
+          )}
           {!isVisiting && (
             <img
               src={SUNNYSIDE.ui.add_button}

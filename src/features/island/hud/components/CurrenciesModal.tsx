@@ -81,9 +81,13 @@ export const CurrenciesModal: React.FC<Props> = ({
   const [price, setPrice] = useState<Price>();
   const [hideBuyBBLabel, setHideBuyBBLabel] = useState(false);
 
-  const token = useSelector(authService, _token);
-  const farmId = useSelector(gameService, _farmId);
-  const autosaving = useSelector(gameService, _autosaving);
+  const tokenValue = useSelector(authService, _token);
+  const farmIdValue = useSelector(gameService, _farmId);
+  const autosavingValue = useSelector(gameService, _autosaving);
+
+  const token = authService ? tokenValue : "";
+  const farmId = gameService ? farmIdValue : 0;
+  const autosaving = gameService ? autosavingValue : false;
 
   const { t } = useAppTranslation();
 
@@ -117,7 +121,7 @@ export const CurrenciesModal: React.FC<Props> = ({
     gameService.send("SAVE");
 
     onboardingAnalytics.logEvent("begin_checkout");
-  }, []);
+  }, [gameService]);
 
   const onFlowerBuy = async (quote: number) => {
     gameService.send("gems.bought", {

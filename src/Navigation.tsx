@@ -56,7 +56,8 @@ export const Navigation: React.FC = () => {
   );
   const [landingImageLoaded, setLandingImageLoaded] = useState(false);
 
-  const state = useSelector(authService, selectState);
+  const authState = useSelector(authService, selectState);
+  const state = authService ? authState : { isAuthorised: false, isVisiting: false };
   const showGame = state.isAuthorised || state.isVisiting;
 
   useEffect(() => {

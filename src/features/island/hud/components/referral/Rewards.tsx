@@ -32,31 +32,38 @@ export const Rewards: React.FC<Props> = ({ show, onHide, tab }) => {
   const [currentTab, setCurrentTab] = useState(tab);
 
   const { gameService } = useContext(Context);
-  const state = useSelector(gameService, (state) => state.context.state);
+  const fullState = useSelector(gameService!, (state) => state.context.state);
+  const chestCollectedAtValue = useSelector(gameService!, _chestCollectedAt);
+
+  const state = gameService ? fullState : undefined;
+  const chestCollectedAt = gameService ? chestCollectedAtValue : 0;
 
   const isTaskCompleted = useCallback(
-    (task: InGameTaskName) => IN_GAME_TASKS[task].requirement(state),
+    (task: InGameTaskName) => {
+      if (!state) return false;
+      return IN_GAME_TASKS[task].requirement(state);
+    },
     [state],
   );
-  const isAnyTaskCompleted = getKeys(IN_GAME_TASKS)
-    .filter(
-      (task) =>
-        !(
-          ["Link your Discord", "Link your Telegram"] as InGameTaskName[]
-        ).includes(task),
-    )
-    .some(
-      (task) =>
-        isTaskCompleted(task) &&
-        !state.socialTasks?.completed[task]?.completedAt,
-    );
-
-  const chestCollectedAt = useSelector(gameService, _chestCollectedAt);
+  const isAnyTaskCompleted = state
+    ? getKeys(IN_GAME_TASKS)
+        .filter(
+          (task) =>
+            !(
+              ["Link your Discord", "Link your Telegram"] as InGameTaskName[]
+            ).includes(task),
+        )
+        .some(
+          (task) =>
+            isTaskCompleted(task) &&
+            !state.socialTasks?.completed[task]?.completedAt,
+        )
+    : false;
 
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
-  const isChestCollected = chestCollectedAt > today.getTime();
+  const _isChestCollected = chestCollectedAt > today.getTime();
 
   return (
     <Modal show={show} onHide={onHide}>
@@ -73,7 +80,7 @@ export const Rewards: React.FC<Props> = ({ show, onHide, tab }) => {
         setCurrentTab={setCurrentTab}
         onClose={onHide}
       >
-        {currentTab === "Earn" && (
+        {currentTab === "Earn" && state && (
           <TaskBoard state={state} socialTasks={state.socialTasks} />
         )}
         {/* {tab === 2 && <RewardsShop />} */}

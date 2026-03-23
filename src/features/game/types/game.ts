@@ -588,6 +588,8 @@ export type Bounties = {
   bonusClaimedAt?: number;
 };
 
+export type MinigameCurrencyItemName = "Chip";
+
 export type InventoryItemName =
   | AnimalResource
   | CropName
@@ -663,7 +665,8 @@ export type InventoryItemName =
   | PetResourceName
   | PetShopItemName
   | CrustaceanName
-  | ChapterRaffleTicket;
+  | ChapterRaffleTicket
+  | MinigameCurrencyItemName;
 
 export type Inventory = Partial<Record<InventoryItemName, Decimal>>;
 
@@ -1939,6 +1942,7 @@ export interface GameState {
     resource: DonationItemName;
     amount: Decimal;
   };
+  dailyChipsLastClaimDate?: string;
   desert: Desert;
 
   ban: {

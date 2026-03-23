@@ -6,12 +6,12 @@ import { Ocean } from "features/world/ui/Ocean";
 import { WalletProvider } from "features/wallet/WalletProvider";
 
 import { PortalExample } from "./example/PortalExample";
+import { CONFIG } from "lib/config";
 
 export const PortalApp: React.FC = () => {
+  // PortalProvider - gives you access to a xstate machine which handles state management
   return (
-    // WalletProvider - if you need to connect to a players wallet
     <WalletProvider>
-      {/* PortalProvider - gives you access to a xstate machine which handles state management */}
       <PortalProvider>
         <Ocean>
           <PortalExample />

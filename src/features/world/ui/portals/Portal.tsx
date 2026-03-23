@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState, useCallback } from "react";
 import { useActor } from "@xstate/react";
 
 import * as AuthProvider from "features/auth/lib/Provider";
@@ -78,13 +78,10 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
 
       const baseUrl = `https://${DOMAIN_MAP[portalName] ?? portalName}.sunflower-land.com`;
 
-      // If testing a local portal, uncomment this line
-      // baseUrl = `http://localhost:3001`;
-
       const language = localStorage.getItem("language") || "en";
       const font = getCachedFont();
 
-      const url = `${baseUrl}?jwt=${token}&network=${CONFIG.NETWORK}&language=${language}&font=${font}`;
+      const url = `${baseUrl}?jwt=${token}&network=${CONFIG.NETWORK}&language=${language}&font=${font}&PORTAL_APP=${portalName}`;
 
       setUrl(url);
 
@@ -95,8 +92,14 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
   }, []);
 
   // Function to handle messages from the iframe
-  const handleMessage = (event: any) => {
+  const handleMessage = useCallback((event: any) => {
+    console.log("[Portal] Message event received:", event);
+    console.log("[Portal] Message data:", event.data);
+    console.log("[Portal] Message data type:", typeof event.data);
+    console.log("[Portal] Message data.event:", event.data?.event);
+    
     if (event.data?.event === "closePortal") {
+      console.log("[Portal] Handling closePortal event");
       // Close the modal when the message is received
       setLoading(false);
       setUrl("");
@@ -104,6 +107,7 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
     }
 
     if (event.data?.event === "claimPrize") {
+      console.log("[Portal] Handling claimPrize event");
       // Close the modal when the message is received
       setLoading(false);
       setIsComplete(true);
@@ -111,17 +115,20 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
     }
 
     if (event.data.event === "purchase") {
+      console.log("[Portal] Handling purchase event");
       // Purchase the item
       setPurchase(event.data);
       return;
     }
 
     if (event.data.event === "donated") {
+      console.log("[Portal] Handling donated event");
       setDonation(event.data);
       return;
     }
 
     if (event.data.event === "attemptStarted") {
+      console.log("[Portal] Handling attemptStarted event");
       // Start the minigame attempt
       gameService.send("minigame.attemptStarted", {
         id: portalName,
@@ -131,6 +138,7 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
     }
 
     if (event.data.event === "scoreSubmitted") {
+      console.log("[Portal] Handling scoreSubmitted event");
       // Submit the minigame score
       gameService.send("minigame.scoreSubmitted", {
         score: event.data.score,
@@ -139,17 +147,19 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
       gameService.send("SAVE");
       return;
     }
-  };
+  }, [gameService, portalName, onClose]);
 
   useEffect(() => {
     // Add event listener to listen for messages from any origin
+    console.log("[Portal] Setting up message listener");
     window.addEventListener("message", handleMessage);
 
     return () => {
       // Remove the event listener when the component is unmounted
+      console.log("[Portal] Removing message listener");
       window.removeEventListener("message", handleMessage);
     };
-  }, []);
+  }, [handleMessage]);
 
   const confirmPurchase = () => {
     gameService.send("minigame.itemPurchased", {

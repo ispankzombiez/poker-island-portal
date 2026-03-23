@@ -192,18 +192,6 @@ export async function autosave(request: Request, retries = 0) {
     throw new Error(ERRORS.TOO_MANY_REQUESTS);
   }
 
-  // Handle 500 errors gracefully - allow local state to persist
-  // The game state has already been updated locally, so we don't throw
-  if (response.status === 500) {
-    autosaveErrors += 1;
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[autosave] Server error (500) - local state persisted but backend sync failed. Will retry on next autosave.",
-    );
-    // Return success with local state - player keeps the update locally
-    return { verified: true };
-  }
-
   if (response.status !== 200 || !response.ok) {
     autosaveErrors += 1;
     throw new Error(ERRORS.AUTOSAVE_SERVER_ERROR);

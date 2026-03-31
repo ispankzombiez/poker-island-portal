@@ -35,10 +35,13 @@ export const NightshadeArcade: React.FC = () => {
   const { portalService } = useContext(PortalContext);
   const [portalState] = useActor(portalService);
   const { t } = useAppTranslation();
-  const [showDailyRavenCoinsModal, setShowDailyRavenCoinsModal] = useState<boolean>(false);
+  const [showDailyRavenCoinsModal, setShowDailyRavenCoinsModal] =
+    useState<boolean>(false);
   const [showShopModal, setShowShopModal] = useState<boolean>(false);
   const [showMinigameModal, setShowMinigameModal] = useState<boolean>(false);
-  const [activeMinigame, setActiveMinigame] = useState<MinigameName | null>(null);
+  const [activeMinigame, setActiveMinigame] = useState<MinigameName | null>(
+    null,
+  );
 
   const gameState = useSelector(portalService, _gameState);
 
@@ -60,49 +63,39 @@ export const NightshadeArcade: React.FC = () => {
 
   // Register the chest click handler in the global event emitter
   useEffect(() => {
-    console.log("[NightshadeArcade] Registering chest click handler");
     nightshadeArcadeEvents.registerChestClickHandler(handleChestClicked);
-    
+
     return () => {
-      console.log("[NightshadeArcade] Cleaning up chest click handler");
       nightshadeArcadeEvents.registerChestClickHandler(null);
     };
   }, [handleChestClicked]);
 
   // Register the minigame handler in the global event emitter
   useEffect(() => {
-    console.log("[NightshadeArcade] Registering minigame handler");
     nightshadeArcadeEvents.registerMinigameHandler(handleMinigameRequested);
-    
+
     return () => {
-      console.log("[NightshadeArcade] Cleaning up minigame handler");
       nightshadeArcadeEvents.registerMinigameHandler(null);
     };
   }, [handleMinigameRequested]);
 
   // Register the shop handler in the global event emitter
   useEffect(() => {
-    console.log("[NightshadeArcade] Registering shop handler");
     nightshadeArcadeEvents.registerShopHandler(handleOpenShop);
-    
+
     return () => {
-      console.log("[NightshadeArcade] Cleaning up shop handler");
       nightshadeArcadeEvents.registerShopHandler(null);
     };
   }, [handleOpenShop]);
 
   // Subscribe to minigames events
   useEffect(() => {
-    console.log("[NightshadeArcade] Subscribing to minigames events");
-    
     const unsubscribePoker = minigamesEventEmitter.subscribe("poker", () => {
-      console.log("[NightshadeArcade] Poker event received from scene");
       setActiveMinigame("poker");
       setShowMinigameModal(true);
     });
 
     return () => {
-      console.log("[NightshadeArcade] Unsubscribing from minigames events");
       unsubscribePoker();
     };
   }, []);
@@ -169,19 +162,29 @@ export const NightshadeArcade: React.FC = () => {
     <div>
       {gameState && (
         <>
-          <Modal show={showDailyRavenCoinsModal} onHide={() => setShowDailyRavenCoinsModal(false)}>
-            <DailyRavenCoinReward onClose={() => setShowDailyRavenCoinsModal(false)} />
+          <Modal
+            show={showDailyRavenCoinsModal}
+            onHide={() => setShowDailyRavenCoinsModal(false)}
+          >
+            <DailyRavenCoinReward
+              onClose={() => setShowDailyRavenCoinsModal(false)}
+            />
           </Modal>
           <Modal show={showShopModal} onHide={() => setShowShopModal(false)}>
-            <NightshadeArcadeShop 
-              onClose={() => setShowShopModal(false)} 
+            <NightshadeArcadeShop
+              onClose={() => setShowShopModal(false)}
               portalService={portalService}
             />
           </Modal>
           {activeMinigame && (
-            <Modal show={showMinigameModal} onHide={() => setShowMinigameModal(false)}>
-              <NightshadeArcadeMinigame 
-                gameName={activeMinigame} 
+            <Modal
+              show={showMinigameModal}
+              onHide={() => setShowMinigameModal(false)}
+              fullscreen
+              dialogClassName="flex items-center justify-center"
+            >
+              <NightshadeArcadeMinigame
+                gameName={activeMinigame}
                 onClose={() => setShowMinigameModal(false)}
               />
             </Modal>

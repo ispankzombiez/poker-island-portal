@@ -464,6 +464,7 @@ import manekiNeko from "assets/sfts/maneki_neko.gif";
 import redEnvelope from "assets/icons/red_envelope.png";
 import loveLetter from "assets/icons/love_letter.png";
 import communityCoin from "assets/icons/community_coin.png";
+import ravenCoin from "assets/icons/RavenCoin.webp";
 import tikiTotem from "assets/sfts/tiki_totem.webp";
 import timeWarpTotem from "assets/sfts/time_warp_totem.webp";
 import lunarCalendar from "assets/sfts/lunar_calendar.webp";
@@ -1227,8 +1228,17 @@ import obsidianShrine from "assets/sfts/shrines/obsidian_shrine.webp";
 import tradingShrine from "assets/sfts/shrines/trading_shrine.webp";
 import divingHelmet from "assets/sfts/diving_helmet.webp";
 
-import { COUPONS, EASTER_EGG, FERTILISERS, InventoryItemName } from "./game";
-import { PORTAL_CURRENCIES, PORTAL_COUPONS } from "features/portal/nightshade-arcade/types/portalGame";
+import {
+  COUPONS,
+  EASTER_EGG,
+  FERTILISERS,
+  InventoryItemName,
+  MinigameCurrencyItemName,
+} from "./game";
+import {
+  PORTAL_CURRENCIES,
+  PORTAL_COUPONS,
+} from "features/portal/nightshade-arcade/types/portalGame";
 
 import { CROPS, CROP_SEEDS, GREENHOUSE_CROPS, GREENHOUSE_SEEDS } from "./crops";
 import { AchievementName, ACHIEVEMENTS } from "./achievements";
@@ -1281,7 +1291,10 @@ export interface ItemDetails {
   translatedName?: string;
 }
 
-type Items = Record<InventoryItemName | AchievementName, ItemDetails>;
+type Items = Record<
+  InventoryItemName | MinigameCurrencyItemName | AchievementName,
+  ItemDetails
+>;
 
 export const ITEM_DETAILS: Items = {
   Sunflower: {
@@ -5831,7 +5844,7 @@ export const ITEM_DETAILS: Items = {
     translatedName: translate("currency.gem"),
   },
   RavenCoin: {
-    image: chip,
+    image: ravenCoin,
     description: PORTAL_CURRENCIES.RavenCoin.description,
     translatedName: translate("currency.ravenCoin"),
   },

@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* eslint-disable @typescript-eslint/no-var-requires */
 require("dotenv").config();
 
 /*
@@ -16,13 +18,22 @@ module.exports = {
 
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
   moduleNameMapper: {
+    "^assets/(.*)\\.(png|jpg|jpeg|webp|gif|svg|ttf|woff|woff2)$":
+      "<rootDir>/test/fileTransform.js",
+    "^features/(.*)\\.(png|jpg|jpeg|webp|gif|svg|ttf|woff|woff2)$":
+      "<rootDir>/test/fileTransform.js",
+    "^components/(.*)\\.(png|jpg|jpeg|webp|gif|svg|ttf|woff|woff2)$":
+      "<rootDir>/test/fileTransform.js",
+    "^lib/(.*)\\.(png|jpg|jpeg|webp|gif|svg|ttf|woff|woff2)$":
+      "<rootDir>/test/fileTransform.js",
     "^lib/(.*)": "<rootDir>/src/lib/$1",
     "^features/(.*)": "<rootDir>/src/features/$1",
     "^components/(.*)": "<rootDir>/src/components/$1",
     "^assets/(.*)": "<rootDir>/test/fileTransform.js",
 
-    ".+\\.(css|styl|less|sass|scss|png|jpg|ttf|woff|woff2)$":
-      "identity-obj-proxy",
+    ".+\\.(css|styl|less|sass|scss)$": "identity-obj-proxy",
+    ".+\\.(png|jpg|jpeg|webp|gif|svg|ttf|woff|woff2)$":
+      "<rootDir>/test/fileTransform.js",
   },
 
   // A map from regular expressions to paths to transformers

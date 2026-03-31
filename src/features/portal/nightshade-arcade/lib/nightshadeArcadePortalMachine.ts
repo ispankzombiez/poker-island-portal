@@ -4,8 +4,24 @@ import { CONFIG } from "lib/config";
 import { decodeToken } from "features/auth/actions/login";
 import { Decimal } from "decimal.js-light";
 import { NIGHTSHADE_ARCADE_SHOP } from "./nightshadeArcadeShop";
-import { PortalGameState, MinigameName } from "../types";
-import { DEFAULT_PORTAL_STATE } from "./defaultState";
+import { PortalGameState } from "../types";
+import { OFFLINE_FARM } from "features/game/lib/landData";
+import { MinigameName } from "../types";
+import { Minigame } from "features/game/types/game";
+
+type ArcadeTier = "basic" | "rare" | "epic" | "mega";
+
+const getArcadeMinigame = (
+  state: PortalGameState,
+  name: MinigameName,
+): Minigame => {
+  return (
+    state.minigames.games[name] ?? {
+      history: {},
+      highscore: 0,
+    }
+  );
+};
 
 export interface Context {
   id: number;
@@ -13,11 +29,12 @@ export interface Context {
   state: PortalGameState;
 }
 
-export type PortalEvent = 
-  | { type: "PURCHASED" } 
+export type PortalEvent =
   | { type: "RETRY" }
   | { type: "dailyRavenCoins.claimed"; reward: number }
-  | { type: "chapterItem.bought"; name: string; tier: string };
+  | { type: "chapterItem.bought"; name: string; tier: ArcadeTier }
+  | { type: "arcadeMinigame.started"; name: MinigameName }
+  | { type: "arcadeMinigame.ravenCoinWon"; amount: number };
 
 export type PortalState = {
   value: "initialising" | "error" | "unauthorised" | "loading" | "playing";
@@ -39,7 +56,7 @@ export const nightshadeArcadePortalMachine = createMachine({
   context: {
     id: 0,
     jwt: getJwt(),
-    state: DEFAULT_PORTAL_STATE,
+    state: CONFIG.API_URL ? undefined : OFFLINE_FARM,
   },
   states: {
     initialising: {
@@ -61,7 +78,7 @@ export const nightshadeArcadePortalMachine = createMachine({
         src: async (context) => {
           if (!getUrl()) {
             return {
-              game: DEFAULT_PORTAL_STATE,
+              game: OFFLINE_FARM,
             };
           }
 
@@ -92,31 +109,27 @@ export const nightshadeArcadePortalMachine = createMachine({
 
     playing: {
       on: {
-        PURCHASED: {
-          actions: [
-            () => {
-              // Put your logic once purchase is complete
-              alert("Thank you for purchasing!");
-            },
-          ],
-        },
         "dailyRavenCoins.claimed": {
           actions: [
             assign({
               state: (context) => {
                 const dateKey = new Date().toISOString().slice(0, 10);
-                const lastClaimDate = context.state.dailyRavenCoinsLastClaimDate ?? null;
-                const isEligible = lastClaimDate === null || lastClaimDate !== dateKey;
+                const lastClaimDate =
+                  context.state.dailyRavenCoinsLastClaimDate ?? null;
+                const isEligible =
+                  lastClaimDate === null || lastClaimDate !== dateKey;
 
                 if (isEligible) {
-                  const currentRavenCoins = new Decimal(context.state.inventory.RavenCoin ?? 0);
+                  const currentRavenCoins = new Decimal(
+                    context.state.inventory.RavenCoin ?? 0,
+                  );
                   const dailyReward = new Decimal(1000);
 
                   return {
                     ...context.state,
                     inventory: {
                       ...context.state.inventory,
-                      RavenCoin: currentRavenCoins.plus(dailyReward).toNumber(),
+                      RavenCoin: currentRavenCoins.plus(dailyReward),
                     },
                     dailyRavenCoinsLastClaimDate: dateKey,
                   };
@@ -130,36 +143,93 @@ export const nightshadeArcadePortalMachine = createMachine({
           actions: [
             assign({
               state: (context, event: any) => {
-                const { name, tier } = event as { name: string; tier: "basic" | "rare" | "epic" | "mega" };
-                
-                // Find the item in the shop
+                const { name, tier } = event as {
+                  name: string;
+                  tier: ArcadeTier;
+                };
+
                 const tierItems = NIGHTSHADE_ARCADE_SHOP[tier]?.items || [];
                 const item = tierItems.find((i: any) => i.name === name);
-                
+
                 if (!item) {
-                  console.warn(`Item ${name} not found in ${tier} tier`);
                   return context.state;
                 }
-                
+
                 const cost = item.cost.items.RavenCoin || 0;
-                const currentRavenCoins = new Decimal(context.state.inventory.RavenCoin ?? 0);
-                
-                // Check if player has enough RavenCoins
+                const currentRavenCoins = new Decimal(
+                  context.state.inventory.RavenCoin ?? 0,
+                );
+
                 if (currentRavenCoins.lt(cost)) {
-                  console.warn(`Not enough RavenCoins. Have ${currentRavenCoins}, need ${cost}`);
                   return context.state;
                 }
-                
-                // Deduct RavenCoins and add item to inventory
+
                 const newRavenCoins = currentRavenCoins.minus(cost);
-                const currentItemCount = (context.state.inventory[name] as any) || 0;
-                
+                const currentItemCount = new Decimal(
+                  context.state.inventory[name] ?? 0,
+                );
+
                 return {
                   ...context.state,
                   inventory: {
                     ...context.state.inventory,
-                    RavenCoin: newRavenCoins.toNumber(),
-                    [name]: (currentItemCount as any) + 1,
+                    RavenCoin: newRavenCoins,
+                    [name]: currentItemCount.plus(1),
+                  },
+                };
+              },
+            }),
+          ],
+        },
+        "arcadeMinigame.started": {
+          actions: [
+            assign({
+              state: (context, event: any) => {
+                const { name } = event as { name: MinigameName };
+                const todayKey = new Date().toISOString().slice(0, 10);
+                const minigame = getArcadeMinigame(context.state, name);
+                const daily = minigame.history[todayKey] ?? {
+                  attempts: 0,
+                  highscore: 0,
+                };
+
+                return {
+                  ...context.state,
+                  minigames: {
+                    ...context.state.minigames,
+                    games: {
+                      ...context.state.minigames.games,
+                      [name]: {
+                        ...minigame,
+                        history: {
+                          ...minigame.history,
+                          [todayKey]: {
+                            ...daily,
+                            attempts: daily.attempts + 1,
+                          },
+                        },
+                      },
+                    },
+                  },
+                };
+              },
+            }),
+          ],
+        },
+        "arcadeMinigame.ravenCoinWon": {
+          actions: [
+            assign({
+              state: (context, event: any) => {
+                const currentRavenCoins = new Decimal(
+                  context.state.inventory.RavenCoin ?? 0,
+                );
+                const amount = new Decimal(event.amount ?? 0);
+
+                return {
+                  ...context.state,
+                  inventory: {
+                    ...context.state.inventory,
+                    RavenCoin: currentRavenCoins.plus(amount),
                   },
                 };
               },

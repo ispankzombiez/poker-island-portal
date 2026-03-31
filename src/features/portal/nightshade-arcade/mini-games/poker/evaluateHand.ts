@@ -3,13 +3,7 @@
  * Evaluates 5-card poker hands and determines winners
  */
 
-import {
-  Card,
-  CardRank,
-  CardSuit,
-  EvaluatedHand,
-  HandRanking,
-} from "./types";
+import { Card, CardRank, EvaluatedHand, HandRanking } from "./types";
 
 // Rank values for comparison
 const RANK_VALUES: Record<CardRank, number> = {
@@ -67,7 +61,7 @@ export function getBestHand(cards: Card[]): Card[] {
 
   // Generate all 5-card combinations from the 7 cards
   const combinations = generateCombinations(cards, 5);
-  
+
   let bestHand = combinations[0];
   let bestRanking = evaluateHand(bestHand).ranking;
 
@@ -188,7 +182,7 @@ export function evaluateHand(cards: Card[]): EvaluatedHand {
 // Helper functions for checking hand types
 function isRoyalFlush(cards: Card[]): boolean {
   if (!isFlush(cards) || !isStraight(cards)) return false;
-  
+
   const values = cards.map((c) => RANK_VALUES[c.rank]).sort((a, b) => b - a);
   return values[0] === 14; // Ace high
 }
@@ -197,7 +191,9 @@ function isStraightFlush(cards: Card[]): boolean {
   return isFlush(cards) && isStraight(cards);
 }
 
-function isFourOfAKind(cards: Card[]): { quads: Card[]; kicker: Card[] } | null {
+function isFourOfAKind(
+  cards: Card[],
+): { quads: Card[]; kicker: Card[] } | null {
   const grouped = groupByRank(cards);
   for (const group of Object.values(grouped)) {
     if (group.length === 4) {
@@ -249,7 +245,7 @@ function isStraight(cards: Card[]): boolean {
 }
 
 function isThreeOfAKind(
-  cards: Card[]
+  cards: Card[],
 ): { trips: Card[]; kickers: Card[] } | null {
   const grouped = groupByRank(cards);
   for (const group of Object.values(grouped)) {
@@ -261,7 +257,9 @@ function isThreeOfAKind(
   return null;
 }
 
-function isTwoPair(cards: Card[]): { pair1: Card[]; pair2: Card[]; kicker: Card[] } | null {
+function isTwoPair(
+  cards: Card[],
+): { pair1: Card[]; pair2: Card[]; kicker: Card[] } | null {
   const grouped = groupByRank(cards);
   const pairs: Card[][] = [];
 
@@ -270,7 +268,9 @@ function isTwoPair(cards: Card[]): { pair1: Card[]; pair2: Card[]; kicker: Card[
   }
 
   if (pairs.length === 2) {
-    const kicker = cards.find((c) => !pairs[0].includes(c) && !pairs[1].includes(c));
+    const kicker = cards.find(
+      (c) => !pairs[0].includes(c) && !pairs[1].includes(c),
+    );
     const kickerArray: Card[] = kicker ? [kicker] : [];
     return {
       pair1: pairs[0],
@@ -327,6 +327,33 @@ function generateCombinations(arr: Card[], size: number): Card[][] {
 }
 
 /**
+ * Get highest card value from cards
+ */
+function getHighestCard(cards: Card[]): number {
+  return Math.max(...cards.map((c) => RANK_VALUES[c.rank]));
+}
+
+/**
+ * Get straight high card (accounting for ace-low straight)
+ */
+function getStraightHighCard(cards: Card[]): number {
+  const values = cards.map((c) => RANK_VALUES[c.rank]).sort((a, b) => a - b);
+
+  // Check for Ace-low straight (2-3-4-5-A)
+  if (
+    values[0] === 2 &&
+    values[1] === 3 &&
+    values[2] === 4 &&
+    values[3] === 5 &&
+    values[4] === 14
+  ) {
+    return 5; // In ace-low straight, 5 is the high card
+  }
+
+  return values[4]; // Regular straight, ace is high
+}
+
+/**
  * Compare two hands and return winner
  * Returns: 1 if hand1 wins, -1 if hand2 wins, 0 if tie
  */
@@ -334,9 +361,148 @@ export function compareHands(hand1: Card[], hand2: Card[]): number {
   const eval1 = evaluateHand(hand1);
   const eval2 = evaluateHand(hand2);
 
+  // Different rankings
   if (eval1.ranking > eval2.ranking) return 1;
   if (eval1.ranking < eval2.ranking) return -1;
 
-  // Same ranking - compare by cards and kickers
-  return 0; // For now, return tie (can be enhanced with tiebreaker logic)
+  // Same ranking - compare by hand type with proper tiebreakers
+  const ranking = eval1.ranking;
+
+  switch (ranking) {
+    case HandRanking.RoyalFlush:
+      // All royal flushes are equal
+      return 0;
+
+    case HandRanking.StraightFlush:
+    case HandRanking.Straight: {
+      const high1 = getStraightHighCard(eval1.cards);
+      const high2 = getStraightHighCard(eval2.cards);
+      return high1 > high2 ? 1 : high1 < high2 ? -1 : 0;
+    }
+
+    case HandRanking.FourOfAKind: {
+      // Compare the rank of the four cards
+      const quad1 = RANK_VALUES[eval1.cards[0].rank];
+      const quad2 = RANK_VALUES[eval2.cards[0].rank];
+      if (quad1 !== quad2) return quad1 > quad2 ? 1 : -1;
+
+      // Same quad, compare kicker
+      if (eval1.kickers.length > 0 && eval2.kickers.length > 0) {
+        const kick1 = RANK_VALUES[eval1.kickers[0].rank];
+        const kick2 = RANK_VALUES[eval2.kickers[0].rank];
+        return kick1 > kick2 ? 1 : kick1 < kick2 ? -1 : 0;
+      }
+      return 0;
+    }
+
+    case HandRanking.FullHouse: {
+      // Compare the rank of the three of a kind
+      const trips1 = RANK_VALUES[eval1.cards[0].rank];
+      const trips2 = RANK_VALUES[eval2.cards[0].rank];
+      if (trips1 !== trips2) return trips1 > trips2 ? 1 : -1;
+
+      // Same trips, compare the pair
+      const pair1 = RANK_VALUES[eval1.cards[3].rank];
+      const pair2 = RANK_VALUES[eval2.cards[3].rank];
+      return pair1 > pair2 ? 1 : pair1 < pair2 ? -1 : 0;
+    }
+
+    case HandRanking.Flush:
+    case HandRanking.HighCard: {
+      // Compare cards from highest to lowest
+      const values1 = eval1.cards
+        .map((c) => RANK_VALUES[c.rank])
+        .sort((a, b) => b - a);
+      const values2 = eval2.cards
+        .map((c) => RANK_VALUES[c.rank])
+        .sort((a, b) => b - a);
+
+      for (let i = 0; i < 5; i++) {
+        if (values1[i] !== values2[i]) {
+          return values1[i] > values2[i] ? 1 : -1;
+        }
+      }
+      return 0;
+    }
+
+    case HandRanking.ThreeOfAKind: {
+      // Compare the rank of the three cards
+      const trips1 = RANK_VALUES[eval1.cards[0].rank];
+      const trips2 = RANK_VALUES[eval2.cards[0].rank];
+      if (trips1 !== trips2) return trips1 > trips2 ? 1 : -1;
+
+      // Same trips, compare kickers from highest to lowest
+      const kick1 = eval1.kickers
+        .map((c) => RANK_VALUES[c.rank])
+        .sort((a, b) => b - a);
+      const kick2 = eval2.kickers
+        .map((c) => RANK_VALUES[c.rank])
+        .sort((a, b) => b - a);
+
+      for (let i = 0; i < kick1.length; i++) {
+        if (kick1[i] !== kick2[i]) {
+          return kick1[i] > kick2[i] ? 1 : -1;
+        }
+      }
+      return 0;
+    }
+
+    case HandRanking.TwoPair: {
+      // Get the two pairs
+      const grouped1 = groupByRank(eval1.cards);
+      const grouped2 = groupByRank(eval2.cards);
+
+      const pairs1 = Object.values(grouped1)
+        .filter((g) => g.length === 2)
+        .map((g) => RANK_VALUES[g[0].rank])
+        .sort((a, b) => b - a);
+      const pairs2 = Object.values(grouped2)
+        .filter((g) => g.length === 2)
+        .map((g) => RANK_VALUES[g[0].rank])
+        .sort((a, b) => b - a);
+
+      // Compare high pair
+      if (pairs1[0] !== pairs2[0]) {
+        return pairs1[0] > pairs2[0] ? 1 : -1;
+      }
+
+      // Compare low pair
+      if (pairs1[1] !== pairs2[1]) {
+        return pairs1[1] > pairs2[1] ? 1 : -1;
+      }
+
+      // Compare kicker
+      if (eval1.kickers.length > 0 && eval2.kickers.length > 0) {
+        const kick1 = RANK_VALUES[eval1.kickers[0].rank];
+        const kick2 = RANK_VALUES[eval2.kickers[0].rank];
+        return kick1 > kick2 ? 1 : kick1 < kick2 ? -1 : 0;
+      }
+      return 0;
+    }
+
+    case HandRanking.OnePair: {
+      // Compare the rank of the pair
+      const pair1 = RANK_VALUES[eval1.cards[0].rank];
+      const pair2 = RANK_VALUES[eval2.cards[0].rank];
+      if (pair1 !== pair2) return pair1 > pair2 ? 1 : -1;
+
+      // Same pair, compare kickers from highest to lowest
+      const kick1 = eval1.kickers
+        .map((c) => RANK_VALUES[c.rank])
+        .sort((a, b) => b - a);
+      const kick2 = eval2.kickers
+        .map((c) => RANK_VALUES[c.rank])
+        .sort((a, b) => b - a);
+
+      for (let i = 0; i < kick1.length; i++) {
+        if (kick1[i] !== kick2[i]) {
+          return kick1[i] > kick2[i] ? 1 : -1;
+        }
+      }
+      return 0;
+    }
+
+    default:
+      return 0;
+  }
 }

@@ -46,7 +46,6 @@ import {
   FRUIT_COMPOST,
   FISH,
   PURCHASEABLE_BAIT,
-  FlowerName,
   FLOWERS,
   FLOWER_SEEDS,
   isFlowerSeed,
@@ -58,7 +57,6 @@ import {
   PROCESSED_RESOURCES,
   CRUSTACEANS_DESCRIPTIONS,
   GameState,
-  type TemperateSeasonName,
 } from "../types/portalItemTypes";
 import {
   getCropPlotTime,
@@ -84,7 +82,11 @@ interface Props {
  * Portal inventory basket - shows Portal Items (from arcade shop) at top, then full game inventory below
  * Adapted from game's Basket.tsx with Portal Items section added
  */
-export const PortalBasket: React.FC<Props> = ({ state, selected, onSelect }) => {
+export const PortalBasket: React.FC<Props> = ({
+  state,
+  selected,
+  onSelect,
+}) => {
   const divRef = useRef<HTMLDivElement>(null);
   const now = useNow({ live: true });
   const [showBoosts, setShowBoosts] = useState(false);
@@ -92,24 +94,28 @@ export const PortalBasket: React.FC<Props> = ({ state, selected, onSelect }) => 
   const { t } = useAppTranslation();
 
   const { inventory } = state;
-  
+
+  const hasPositiveAmount = (value: unknown) =>
+    new Decimal((value as Decimal | number | undefined) ?? 0).gt(0);
+
   // Get all arcade item names - tagged items like game's TOOLS, RESOURCES, COUPONS
   const arcadeItemSet = new Set<string>(getKeys(ARCADE_ITEMS));
 
   // Arcade items - only items that are in the ARCADE_ITEMS catalog AND have count > 0
   const arcadeItems = getKeys(inventory)
     .filter((item) => arcadeItemSet.has(item as any))
-    .filter((item) => (inventory[item as any] ?? 0) > 0)
+    .filter((item) => hasPositiveAmount(inventory[item as any]))
     .sort() as string[];
 
   // Game inventory - create a virtual game state to use with game basket logic
   const gameState: GameState = {
     ...state,
-    season: { season: "spring", createdAt: Date.now() },
+    season: { season: "spring", createdAt: now },
   } as unknown as GameState;
 
   const basketMap = getBasketItems(gameState.inventory || {});
-  const basketIsEmpty = Object.values(basketMap).length === 0 && arcadeItems.length === 0;
+  const basketIsEmpty =
+    Object.values(basketMap).length === 0 && arcadeItems.length === 0;
 
   if (basketIsEmpty) {
     return (
@@ -121,18 +127,16 @@ export const PortalBasket: React.FC<Props> = ({ state, selected, onSelect }) => 
             width: `${PIXEL_SCALE * 12}px`,
           }}
         />
-        <span className="text-xs text-center mt-2">
-          Basket is empty
-        </span>
+        <span className="text-xs text-center mt-2">{"Basket is empty"}</span>
       </div>
     );
   }
 
-  const selectedItem = selected ?? arcadeItems[0] ?? getKeys(basketMap)[0] ?? "Sunflower Seed";
+  const selectedItem =
+    selected ?? arcadeItems[0] ?? getKeys(basketMap)[0] ?? "Sunflower Seed";
 
-  const isPatchFruitSeed = (
-    selected: string,
-  ): selected is PatchFruitSeedName => selected in PATCH_FRUIT_SEEDS;
+  const isPatchFruitSeed = (selected: string): selected is PatchFruitSeedName =>
+    selected in PATCH_FRUIT_SEEDS;
   const isSeed = (selected: string): selected is SeedName =>
     selected in CROP_SEEDS ||
     selected in PATCH_FRUIT_SEEDS ||
@@ -329,11 +333,7 @@ export const PortalBasket: React.FC<Props> = ({ state, selected, onSelect }) => 
       content={
         <>
           {/* Arcade Items at the top - tagged items like game's TOOLS, RESOURCES, COUPONS */}
-          {itemsSection(
-            "Arcade Items",
-            arcadeItems,
-            SUNNYSIDE.icons.basket,
-          )}
+          {itemsSection("Arcade Items", arcadeItems, SUNNYSIDE.icons.basket)}
 
           {/* Game inventory sections - EXACTLY as in game */}
           {itemsSection(

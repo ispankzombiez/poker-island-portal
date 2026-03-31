@@ -2,9 +2,9 @@
  * Portal Item Types Wrapper
  * Re-exports game item types for inventory display purposes
  * This file makes explicit which game types we intentionally use
- * 
- * Note: We reference game item types for DISPLAY only
- * State management is completely separate via PortalGameState
+ *
+ * Note: We reference game item types for display utilities.
+ * Nightshade Arcade now uses GameState-backed portal state.
  */
 
 // Re-export game item types for inventory display
@@ -14,11 +14,7 @@ export type {
   TemperateSeasonName,
 } from "features/game/types/game";
 
-export { 
-  COUPONS,
-  FERTILISERS,
-  EASTER_EGG,
-} from "features/game/types/game";
+export { COUPONS, FERTILISERS, EASTER_EGG } from "features/game/types/game";
 
 export type {
   CropName,
@@ -44,10 +40,7 @@ export type { SeedName } from "features/game/types/seeds";
 
 export type { PatchFruitSeedName } from "features/game/types/fruits";
 
-export {
-  ANIMAL_RESOURCES,
-  COMMODITIES,
-} from "features/game/types/resources";
+export { ANIMAL_RESOURCES, COMMODITIES } from "features/game/types/resources";
 
 export { BEANS, EXOTIC_CROPS } from "features/game/types/beans";
 

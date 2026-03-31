@@ -17,6 +17,7 @@ import { Memory } from "./Memory";
 import { Context as GameContext } from "features/game/GameProvider";
 import { hasFeatureAccess } from "lib/flags";
 import { ChaacsTemple } from "./ChaacsTemple";
+import { Poker } from "./Poker";
 
 const host = window.location.host.replace(/^www\./, "");
 const LOCAL_STORAGE_KEY = `portal-chooser-${host}-${window.location.pathname}`;
@@ -86,8 +87,8 @@ export const PORTAL_OPTIONS: PortalOption[] = [
   {
     id: "poker",
     npc: "billy",
-    title: translate("portal.pokerIsland.title"),
-    description: translate("portal.pokerIsland.description"),
+    title: translate("minigame.nightshadeArcade"),
+    description: translate("minigame.nightshadeArcadeHelp"),
     component: Poker,
   },
 ];

@@ -1,21 +1,10 @@
 /**
- * Portal-specific types independent of the main game
+ * Nightshade Arcade portal types
  */
 
-export interface PortalInventory {
-  RavenCoin?: number;
-  [itemName: string]: number | undefined;
-}
+import { GameState } from "features/game/types/game";
 
-export interface PortalGameState {
-  // Portal-specific state only
-  inventory: PortalInventory;
-  dailyRavenCoinsLastClaimDate?: string | null;
-  
-  // Required for HUD display
-  balance: number;
-  coins: number;
-}
+export type PortalGameState = GameState;
 
 export type MinigameName = "poker" | "slots" | "blackjack" | "roulette";
 

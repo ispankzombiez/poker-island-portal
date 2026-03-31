@@ -76,7 +76,7 @@ export function donate({ matic, address }: { matic: number; address: string }) {
  */
 export function startAttempt() {
   if (!isInIframe) {
-    alert(`Sunflower Land running in test mode - attempt started`);
+    return;
   } else {
     window.parent.postMessage({ event: "attemptStarted" }, "*");
   }
@@ -87,7 +87,7 @@ export function startAttempt() {
  */
 export function submitScore({ score }: { score: number }) {
   if (!isInIframe) {
-    alert(`Sunflower Land running in test mode - score submitted`);
+    return;
   } else {
     window.parent.postMessage({ event: "scoreSubmitted", score }, "*");
   }

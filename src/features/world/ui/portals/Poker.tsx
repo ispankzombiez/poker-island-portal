@@ -91,9 +91,9 @@ export const Poker: React.FC<Props> = ({ onClose }) => {
       <div className="mb-1">
         <div className="p-2">
           <Label type="default" className="mb-1" icon={factions}>
-            {t("minigame.pokerIsland")}
+            {t("minigame.nightshadeArcade")}
           </Label>
-          <InlineDialogue message={t("minigame.pokerIslandHelp")} />
+          <InlineDialogue message={t("minigame.nightshadeArcadeHelp")} />
         </div>
 
         <MinigamePrizeUI

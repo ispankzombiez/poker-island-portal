@@ -1,4 +1,8 @@
 export type MinigameName =
+  | "poker"
+  | "blackjack"
+  | "roulette"
+  | "slots"
   | "crop-boom"
   | "bumpkin-fight-club"
   | "bumpkin-board-game"
@@ -22,6 +26,10 @@ export type MinigameName =
   | "chaacs-temple";
 
 export const SUPPORTED_MINIGAMES: MinigameName[] = [
+  "poker",
+  "blackjack",
+  "roulette",
+  "slots",
   "crop-boom",
   "bumpkin-fight-club",
   "bumpkin-board-game",

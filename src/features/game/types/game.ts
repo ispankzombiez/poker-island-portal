@@ -298,6 +298,7 @@ export type Coupons =
   | "Halloween Ticket 2025"
   | "Holiday Token 2025"
   | "Holiday Ticket 2025"
+  | "Nightshade Ticket"
   | "April Fools Token 2026"
   | "April Fools Ticket 2026"
   | "Cheer"
@@ -461,6 +462,9 @@ export const COUPONS: Record<Coupons, { description: string }> = {
   },
   "Holiday Ticket 2025": {
     description: translate("description.holidayTicket2025"),
+  },
+  "Nightshade Ticket": {
+    description: translate("description.nightshade.ticket"),
   },
   "April Fools Token 2026": {
     description: translate("description.aprilFoolsToken2026"),
@@ -630,6 +634,7 @@ export type InventoryItemName =
   | MOMEventItem
   | MutantAnimal
   | Coupons
+  | MinigameCurrencyItemName
   | Points
   | WarItems
   | SpecialEvent

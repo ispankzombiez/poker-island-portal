@@ -16,9 +16,9 @@ export class NightshadeArcadeScene extends BaseScene {
   constructor() {
     super({
       name: "nightshade-arcade" as any,
-      map: { 
+      map: {
         json: mapJson,
-        imageKey: "nightshade-tileset"
+        imageKey: "nightshade-tileset",
       },
       audio: { fx: { walk_key: "dirt_footstep" } },
       player: { spawn: getNightshadeArcadeSpawn() },
@@ -30,7 +30,7 @@ export class NightshadeArcadeScene extends BaseScene {
     this.load.image("nightshade-tileset", customTileset);
     this.load.image("stairs", stairsDown);
     this.load.image("ravenCoinIcon", ravenCoinIcon);
-    
+
     // Now call super.preload()
     super.preload();
   }
@@ -45,8 +45,8 @@ export class NightshadeArcadeScene extends BaseScene {
       "nightshade-tileset",
       16,
       16,
-      0,  // margin: 0
-      0   // spacing: 0
+      0, // margin: 0
+      0, // spacing: 0
     ) as Phaser.Tilemaps.Tileset;
 
     // Set up collider layers
@@ -65,13 +65,10 @@ export class NightshadeArcadeScene extends BaseScene {
 
     // Setup interactable layers
     if (this.map.getObjectLayer("Collision")) {
-      const interactablesPolygons = this.map.createFromObjects(
-        "Collision",
-        {},
-      );
+      const interactablesPolygons = this.map.createFromObjects("Collision", {});
       interactablesPolygons.forEach((polygon) => {
         const name = (polygon as any).name;
-        
+
         // Only make machines and special objects interactive
         if (
           name?.includes("Machine") ||
@@ -112,24 +109,20 @@ export class NightshadeArcadeScene extends BaseScene {
 
     if (!this.map.getObjectLayer("Trigger")) return;
 
-    this.map
-      .getObjectLayer("Trigger")
-      ?.objects.forEach((trigger) => {
-        const polygon = this.add.polygon(
-          trigger.x as number,
-          trigger.y as number,
-          trigger.polygon as unknown as number[][],
-          0xff0000,
-          0,
-        );
+    this.map.getObjectLayer("Trigger")?.objects.forEach((trigger) => {
+      const polygon = this.add.polygon(
+        trigger.x as number,
+        trigger.y as number,
+        trigger.polygon as unknown as number[][],
+        0xff0000,
+        0,
+      );
 
-        polygon.data.set("name", trigger.name);
+      polygon.data.set("name", trigger.name);
 
-        this.triggerColliders?.add(polygon);
-      });
+      this.triggerColliders?.add(polygon);
+    });
   }
-
-
 
   async create() {
     super.create();
@@ -162,10 +155,7 @@ export class NightshadeArcadeScene extends BaseScene {
     // Make Raven clickable to open shop
     ravenNpc.setInteractive({ cursor: "pointer" }).on("pointerdown", () => {
       if (this.checkDistanceToSprite(ravenNpc as any, 50)) {
-        console.log("Opening shop...");
         nightshadeArcadeEvents.emitOpenShop();
-      } else {
-        console.log("Player is too far away");
       }
     });
 
@@ -174,29 +164,29 @@ export class NightshadeArcadeScene extends BaseScene {
 
     // Handle clickable daily chests from the Tiled map
     const objectLayer = this.map.getObjectLayer("Collision");
-    
+
     if (objectLayer) {
-      console.log(`[NightshadeArcade] Found Collision layer with ${objectLayer.objects.length} objects`);
       objectLayer.objects.forEach((obj: any) => {
-        console.log(`[NightshadeArcade] Checking object: name="${obj.name}"`);
         // Check if this object is a daily chest (by name)
         if (obj.name && obj.name.toLowerCase() === "daily chest") {
           const chestX = obj.x + obj.width / 2;
           const chestY = obj.y + obj.height / 2;
-          console.log(`[NightshadeArcade] Creating daily chest at (${chestX}, ${chestY}) with size (${obj.width}, ${obj.height})`);
-          
+
           // Create a zone for interaction at the same location
-          const chestZone = this.add.zone(chestX, chestY, obj.width, obj.height);
-          
-          chestZone.setInteractive({ cursor: "pointer" }).on("pointerdown", () => {
-            console.log(`[DailyChest] Clicked! Chest at (${chestX}, ${chestY})`);
-            if (this.checkDistanceToSprite(chestZone as any, 50)) {
-              console.log("Opening daily chest reward...");
-              nightshadeArcadeEvents.emitChestClicked();
-            } else {
-              console.log(`[DailyChest] Player is too far away from chest`);
-            }
-          });
+          const chestZone = this.add.zone(
+            chestX,
+            chestY,
+            obj.width,
+            obj.height,
+          );
+
+          chestZone
+            .setInteractive({ cursor: "pointer" })
+            .on("pointerdown", () => {
+              if (this.checkDistanceToSprite(chestZone as any, 50)) {
+                nightshadeArcadeEvents.emitChestClicked();
+              }
+            });
         }
       });
     }

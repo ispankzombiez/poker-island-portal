@@ -6,7 +6,20 @@
 export type CardSuit = "Kale" | "Barley" | "Wheat" | "Radish";
 
 // Card Ranks
-export type CardRank = "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "J" | "Q" | "K" | "A";
+export type CardRank =
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "10"
+  | "J"
+  | "Q"
+  | "K"
+  | "A";
 
 // Card representation
 export interface Card {
@@ -38,37 +51,46 @@ export interface EvaluatedHand {
 
 // Game bet amounts
 export const BET_AMOUNTS = [1, 5, 10, 25, 50, 100] as const;
-export type BetAmount = typeof BET_AMOUNTS[number];
+export type BetAmount = (typeof BET_AMOUNTS)[number];
 
 // Game state
 export interface PokerGameState {
-  status: "idle" | "betting" | "preflop_betting" | "postflop_betting" | "postriver_betting" | "showdown" | "gameover";
-  
+  status:
+    | "idle"
+    | "betting"
+    | "preflop_betting"
+    | "postflop_betting"
+    | "postriver_betting"
+    | "showdown"
+    | "gameover";
+
   // Players
   playerHand: Card[];
   playerChips: number;
   houseHand: Card[];
-  
+
   // Community cards
   communityCards: Card[];
-  
+
   // Betting
   initialBetAmount: number;
   currentBet: number;
   potAmount: number;
-  
+
   // Cumulative bets across all streets
   totalPlayerBetAcrossGame: number;
   totalHouseBetAcrossGame: number;
-  
+
   // Bets this round (street)
   playerBetAmount: number;
   houseBetAmount: number;
-  
+
   // Evaluated hands at end of game
   playerEvalHand: EvaluatedHand | null;
   houseEvalHand: EvaluatedHand | null;
-  
+  lastWinner: "player" | "house" | "tie" | null;
+  lastWinAmount: number;
+
   // Game history
   gameNumber: number;
   totalWinnings: number;
@@ -76,7 +98,7 @@ export interface PokerGameState {
 }
 
 // Possible actions
-export type PokerAction = 
+export type PokerAction =
   | { type: "PLACE_BET"; amount: BetAmount }
   | { type: "FOLD" }
   | { type: "CHECK" }

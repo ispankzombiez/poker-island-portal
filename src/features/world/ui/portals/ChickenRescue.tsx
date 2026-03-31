@@ -13,18 +13,24 @@ import { ClaimReward } from "features/game/expansion/components/ClaimReward";
 import { PortalLeaderboard } from "./PortalLeaderboard";
 import { MachineState } from "features/game/lib/gameMachine";
 import { MinigamePrizeUI } from "./MinigamePrizeUI";
+import { useVipAccess } from "lib/utils/hooks/useVipAccess";
+
 interface Props {
   onClose: () => void;
 }
 
 const _minigames = (state: MachineState) => state.context.state.minigames;
+const _game = (state: MachineState) => state.context.state;
 
 export const ChickenRescue: React.FC<Props> = ({ onClose }) => {
   const { authService } = useContext(AuthProvider.Context);
   const { gameService } = useContext(Context);
   const minigames = useSelector(gameService, _minigames);
+  const game = useSelector(gameService, _game);
   const minigame = minigames.games["chicken-rescue"];
   const prize = minigames.prizes["chicken-rescue"];
+
+  const chickenRescueVipCluckCoin = useVipAccess({ game, type: "full" });
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
@@ -44,7 +50,7 @@ export const ChickenRescue: React.FC<Props> = ({ onClose }) => {
   if (isPlaying) {
     return (
       <div>
-        <Portal portalName="chicken-rescue" onClose={onClose} />
+        <Portal portalName="chicken-rescue-v2" onClose={onClose} />
       </div>
     );
   }
@@ -61,15 +67,21 @@ export const ChickenRescue: React.FC<Props> = ({ onClose }) => {
   });
 
   if (isComplete && !dailyAttempt.prizeClaimedAt && prize) {
+    const claimItems = {
+      ...prize.items,
+      ...(chickenRescueVipCluckCoin ? { CluckCoin: 1 } : {}),
+    };
+
     return (
       <ClaimReward
         onClaim={onClaim}
+        vipGiftItem={chickenRescueVipCluckCoin ? "CluckCoin" : undefined}
         reward={{
           message:
             "Congratulations, you rescued the chickens! Here is your reward.",
           factionPoints: 0,
           id: "discord-bonus",
-          items: prize.items,
+          items: claimItems,
           wearables: prize.wearables,
           sfl: 0,
           coins: prize.coins,
@@ -103,6 +115,7 @@ export const ChickenRescue: React.FC<Props> = ({ onClose }) => {
           prize={prize}
           history={dailyAttempt}
           mission={`Mission: Rescue ${prize?.score} chickens`}
+          extraItems={chickenRescueVipCluckCoin ? { CluckCoin: 1 } : undefined}
         />
       </div>
       <div className="flex">

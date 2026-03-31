@@ -32,6 +32,8 @@ import { ChapterDashboard } from "features/chapterDashboard/ChapterDashboard";
 import { GameWrapper } from "features/game/expansion/Game";
 import { ModalProvider } from "features/game/components/modal/ModalProvider";
 import { FeedProvider } from "features/social/FeedContext";
+import { AIBuilder } from "features/portal-ai/AIBuilder";
+import { MinigameDashboard } from "features/minigame/MinigameDashboard";
 
 // Lazy load routes
 const World = lazy(() =>
@@ -198,6 +200,14 @@ export const Navigation: React.FC = () => {
                                       <ChapterDashboard />
                                     </GameWrapper>
                                   }
+                                />
+                                <Route
+                                  path="/ai-builder"
+                                  element={<AIBuilder />}
+                                />
+                                <Route
+                                  path="/minigame/:slug"
+                                  element={<MinigameDashboard />}
                                 />
                                 <Route
                                   path="*"

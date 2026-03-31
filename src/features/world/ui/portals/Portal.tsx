@@ -25,11 +25,6 @@ import sflIcon from "assets/icons/flower_token.webp";
 import { IPortalDonation, PortalDonation } from "./PortalDonation";
 import { getCachedFont } from "lib/utils/fonts";
 
-interface Props {
-  portalName: MinigameName;
-  onClose: () => void;
-}
-
 type PortalPurchase = {
   sfl: number;
   items?: Partial<Record<InventoryItemName, number>>;
@@ -40,10 +35,44 @@ type PortalPurchase = {
  */
 const DOMAIN_MAP: Partial<Record<MinigameName, string>> = {
   "festival-of-colors-2025": "festival-of-colors",
-  "holiday-puzzle-2025": "halloween",
+  "april-fools": "halloween",
+  "chaacs-temple": "chaacs-temple.minigames",
+  /** Host: `https://chicken-rescue-v2.minigames.sunflower-land.com` */
+  "chicken-rescue-v2": "chicken-rescue-v2.minigames",
 };
 
-export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
+/**
+ * Iframe base URL resolution:
+ * 1. `VITE_PORTAL_GAME_URL` when set (local / override).
+ * 2. `apiPlayUrl` from the minigame session API when provided (e.g. dashboard).
+ * 3. `DOMAIN_MAP` / default `https://{portalName}.sunflower-land.com`.
+ */
+function resolveMinigameIframeBaseUrl(
+  portalName: MinigameName,
+  apiPlayUrl?: string,
+): string {
+  const fromEnv = CONFIG.PORTAL_GAME_URL?.trim();
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, "");
+  }
+
+  const fromApi = apiPlayUrl?.trim();
+  if (fromApi) {
+    return fromApi.replace(/\/$/, "");
+  }
+
+  const slug = DOMAIN_MAP[portalName] ?? portalName;
+  return `https://${slug}.sunflower-land.com`;
+}
+
+interface Props {
+  portalName: MinigameName;
+  onClose: () => void;
+  /** Canonical play URL from `GET /portal/:id/minigame` when API provides `playUrl`. */
+  playUrl?: string;
+}
+
+export const Portal: React.FC<Props> = ({ portalName, onClose, playUrl }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const { gameService } = useContext(Context);
@@ -76,12 +105,21 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
         token = portalToken;
       }
 
-      const baseUrl = `https://${DOMAIN_MAP[portalName] ?? portalName}.sunflower-land.com`;
+      const baseUrl = resolveMinigameIframeBaseUrl(portalName, playUrl);
 
       const language = localStorage.getItem("language") || "en";
       const font = getCachedFont();
 
-      const url = `${baseUrl}?jwt=${token}&network=${CONFIG.NETWORK}&language=${language}&font=${font}&PORTAL_APP=${portalName}`;
+      const params = new URLSearchParams();
+      params.set("jwt", token);
+      params.set("network", CONFIG.NETWORK);
+      params.set("language", language);
+      params.set("font", font);
+      if (CONFIG.API_URL) {
+        params.set("apiUrl", CONFIG.API_URL);
+      }
+
+      const url = `${baseUrl}?${params.toString()}`;
 
       setUrl(url);
 
@@ -89,7 +127,12 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
     };
 
     load();
-  }, []);
+  }, [
+    portalName,
+    playUrl,
+    authState.context.user.rawToken,
+    gameState.context.farmId,
+  ]);
 
   // Function to handle messages from the iframe
   const handleMessage = useCallback((event: any) => {
@@ -197,6 +240,7 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
 
   if (isComplete) {
     const prize = gameState.context.state.minigames.prizes[portalName];
+
     return (
       <ClaimReward
         onClaim={onClaim}
@@ -293,7 +337,6 @@ export const Portal: React.FC<Props> = ({ portalName, onClose }) => {
           </div>,
           document.body,
         )}
-      <Loading className="z-10 left-0 top-0" />
     </>
   );
 };

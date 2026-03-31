@@ -67,6 +67,7 @@ import { WaveModal } from "features/social/WaveModal";
 import { Discovery } from "features/social/Discovery";
 import { SPAWNS } from "./lib/spawn";
 import { PlayerInteractionMenu } from "./ui/player/PlayerInteractionMenu";
+import { AprilFoolsIslandScene } from "./scenes/AprilFoolsIslandScene";
 
 const _roomState = (state: any) => state?.value;
 const _scene = (state: any) => state?.context?.sceneId;
@@ -158,6 +159,7 @@ export const PhaserComponent: React.FC<Props> = ({ mmoService, route }) => {
     InfernosScene,
     StreamScene,
     LoveIslandScene,
+    AprilFoolsIslandScene,
   ];
 
   useEffect(() => {

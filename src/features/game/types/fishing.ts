@@ -21,7 +21,15 @@ export type GuaranteedBait =
   | "Fish Stick"
   | "Fish Oil"
   | "Crab Stick";
-export type FishingBait = Worm | PurchaseableBait | GuaranteedBait;
+export type FermentationBait =
+  | "Capsule Bait"
+  | "Umbrella Bait"
+  | "Crimson Baitfish";
+export type FishingBait =
+  | Worm
+  | PurchaseableBait
+  | GuaranteedBait
+  | FermentationBait;
 export type FishType =
   | "basic"
   | "advanced"
@@ -68,6 +76,9 @@ export type FishName =
   | "Rock Blackfish"
   | "Cobia"
   | "Tilapia";
+
+export type AgedFishName = `Aged ${FishName}`;
+export type PrimeAgedFishName = `Prime Aged ${FishName}`;
 
 export type MarineMarvelName =
   | "Twilight Anglerfish"
@@ -633,6 +644,45 @@ export const FISH: Record<FishName | MarineMarvelName, Fish> = {
   ...CHAPTER_FISH,
 };
 
+export function getFishNamesByTier(
+  tier: Extract<FishType, "basic" | "advanced" | "expert">,
+): FishName[] {
+  return (Object.keys(FISH) as (FishName | MarineMarvelName)[]).filter(
+    (name) => FISH[name].type === tier,
+  ) as FishName[];
+}
+
+/** Fermentation baits count as the matching worm for fish `baits` lists. */
+export function baitMatchesFishRequirement(
+  selected: FishingBait,
+  allowed: FishingBait,
+): boolean {
+  if (selected === allowed) return true;
+  if (allowed === "Earthworm" && selected === "Capsule Bait") return true;
+  if (allowed === "Grub" && selected === "Umbrella Bait") return true;
+  if (allowed === "Red Wiggler" && selected === "Crimson Baitfish") return true;
+  return false;
+}
+
+/** Map fermentation bait to worm for attraction / chum logic keyed by worm. */
+export function normalizeBaitForWormMechanics(bait: FishingBait): FishingBait {
+  if (bait === "Capsule Bait") return "Earthworm";
+  if (bait === "Umbrella Bait") return "Grub";
+  if (bait === "Crimson Baitfish") return "Red Wiggler";
+  return bait;
+}
+
+/** Fermentation baits to list in the fishing guide when a fish accepts the matching worm. */
+export function getFermentationBaitsForFishBaits(
+  fishBaits: readonly FishingBait[],
+): FishingBait[] {
+  const extra: FishingBait[] = [];
+  if (fishBaits.includes("Earthworm")) extra.push("Capsule Bait");
+  if (fishBaits.includes("Grub")) extra.push("Umbrella Bait");
+  if (fishBaits.includes("Red Wiggler")) extra.push("Crimson Baitfish");
+  return extra;
+}
+
 /**
  * Difficulty 1-5 how hard the challenge will be
  */
@@ -814,6 +864,9 @@ export const BAIT: Record<FishingBait, true> = {
   "Fish Stick": true,
   "Fish Oil": true,
   "Crab Stick": true,
+  "Capsule Bait": true,
+  "Umbrella Bait": true,
+  "Crimson Baitfish": true,
 };
 
 export type MapPieceFishTrigger = {

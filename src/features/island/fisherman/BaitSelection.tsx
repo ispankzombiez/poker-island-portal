@@ -38,7 +38,7 @@ import {
 } from "features/game/events/landExpansion/castRod";
 import { isFishFrenzy, isFullMoon } from "features/game/types/calendar";
 import { SEASON_ICONS } from "../buildings/components/building/market/SeasonalSeeds";
-import { hasVipAccess } from "features/game/lib/vipAccess";
+import { useVipAccess } from "lib/utils/hooks/useVipAccess";
 import { Checkbox } from "components/ui/Checkbox";
 import { SmallBox } from "components/ui/SmallBox";
 import { ChumSelection } from "./ChumSelection";
@@ -48,11 +48,15 @@ import { gameAnalytics } from "lib/gameAnalytics";
 import { ModalOverlay } from "components/ui/ModalOverlay";
 import { useNow } from "lib/utils/hooks/useNow";
 import { ModalContext } from "features/game/components/modal/ModalProvider";
+import { hasFeatureAccess } from "lib/flags";
 
 const BAIT: FishingBait[] = [
   "Earthworm",
   "Grub",
   "Red Wiggler",
+  "Capsule Bait",
+  "Umbrella Bait",
+  "Crimson Baitfish",
   "Fishing Lure",
   "Fish Flake",
   "Fish Stick",
@@ -118,7 +122,7 @@ export const BaitSelection: React.FC<Props> = ({ onCast, state }) => {
     ...getChestItems(state),
   };
 
-  const isVip = hasVipAccess({ game: state });
+  const isVip = useVipAccess({ game: state });
   const currentSeason = state.season.season;
   const now = useNow();
 
@@ -349,7 +353,13 @@ export const BaitSelection: React.FC<Props> = ({ onCast, state }) => {
           </div>
         </InnerPanel>
         <DropdownPanel
-          options={BAIT.map((bait) => ({
+          options={BAIT.filter(
+            (bait) =>
+              (bait !== "Capsule Bait" &&
+                bait !== "Umbrella Bait" &&
+                bait !== "Crimson Baitfish") ||
+              hasFeatureAccess(state, "AGING_SHED"),
+          ).map((bait) => ({
             value: bait,
             label: (
               <div className="flex flex-col gap-1">

@@ -66,7 +66,6 @@ import {
   buyBlockBucks,
   buyBlockBucksMATIC,
 } from "../actions/buyGems";
-import { getSessionId } from "lib/blockchain/Session";
 import { BumpkinItem } from "../types/bumpkin";
 import { getAuctionResults } from "../actions/getAuctionResults";
 import { AuctionResults } from "./auctionMachine";
@@ -99,7 +98,7 @@ import { TRANSACTION_SIGNATURES, TransactionName } from "../types/transactions";
 import { getKeys } from "lib/object";
 import { preloadHotNow } from "features/marketplace/components/MarketplaceHotNow";
 import { getLastTemperateSeasonStartedAt } from "./temperateSeason";
-import { hasVipAccess } from "./vipAccess";
+import { hasLifetimeFarmerBanner, hasVipAccess } from "./vipAccess";
 import { getActiveCalendarEvent, SeasonalEventName } from "../types/calendar";
 import { getConnection, getChainId } from "@wagmi/core";
 import { config } from "features/wallet/WalletProvider";
@@ -334,7 +333,6 @@ export type BlockchainEvent =
   | SellMarketResourceEvent
   | { type: "REFRESH" }
   | { type: "ACKNOWLEDGE" }
-  | { type: "EXPIRED" }
   | { type: "CONTINUE"; id?: string }
   | { type: "RESET" }
   | { type: "DEPOSIT" }
@@ -366,7 +364,16 @@ export type BlockchainEvent =
   | { type: StateMachineVisitEffectName }
   | Effect; // Test only
 
-const playingEventHandler = (eventName: string) => {
+type PlayingEventHandlerOptions = {
+  /** When true (own farm only), queue an autosave as soon as the event is applied. */
+  immediateSave?: boolean;
+};
+
+const playingEventHandler = (
+  eventName: string,
+  options?: PlayingEventHandlerOptions,
+) => {
+  const immediateSave = options?.immediateSave === true;
   return {
     [eventName]: [
       {
@@ -395,6 +402,7 @@ const playingEventHandler = (eventName: string) => {
         ),
       },
       {
+        ...(immediateSave ? { target: "autosaving" as const } : {}),
         actions: assign(
           (context: Context, event: PlayingEvent | VisitingEvent) => {
             const createdAt = new Date();
@@ -452,6 +460,16 @@ const GAME_EVENT_HANDLERS: TransitionsConfig<Context, BlockchainEvent> =
     {},
   );
 
+/** Same as `GAME_EVENT_HANDLERS` but enters `autosaving` after each successful event (own farm / `playing` only). */
+const PLAYING_GAME_EVENT_HANDLERS: TransitionsConfig<Context, BlockchainEvent> =
+  Object.keys(PLAYING_EVENTS).reduce(
+    (events, eventName) => ({
+      ...events,
+      ...playingEventHandler(eventName, { immediateSave: true }),
+    }),
+    {},
+  );
+
 const VISITING_EVENT_HANDLERS: TransitionsConfig<Context, BlockchainEvent> =
   Object.keys(VISITING_EVENTS).reduce(
     (events, eventName) => ({
@@ -461,37 +479,47 @@ const VISITING_EVENT_HANDLERS: TransitionsConfig<Context, BlockchainEvent> =
     {},
   );
 
-const PLACEMENT_EVENT_HANDLERS: TransitionsConfig<Context, BlockchainEvent> = [
-  ...Object.keys(PLACEMENT_EVENTS),
-  "biome.bought",
-  "biome.applied",
-].reduce(
-  (events, eventName) => ({
-    ...events,
-    [eventName]: {
-      actions: assign((context: Context, event: PlacementEvent) => {
-        const createdAt = new Date();
+function createPlacementEventHandlers(
+  immediateSave: boolean,
+): TransitionsConfig<Context, BlockchainEvent> {
+  return [
+    ...Object.keys(PLACEMENT_EVENTS),
+    "biome.bought",
+    "biome.applied",
+  ].reduce(
+    (events, eventName) => ({
+      ...events,
+      [eventName]: {
+        ...(immediateSave ? { target: "autosaving" as const } : {}),
+        actions: assign((context: Context, event: PlacementEvent) => {
+          const createdAt = new Date();
 
-        return {
-          state: processEvent({
-            state: context.state as GameState,
-            action: event,
-            farmId: context.farmId,
-            createdAt: createdAt.getTime(),
-          }) as GameState,
-          actions: [
-            ...context.actions,
-            {
-              ...event,
-              createdAt,
-            },
-          ],
-        };
-      }),
-    },
-  }),
-  {},
-);
+          return {
+            state: processEvent({
+              state: context.state as GameState,
+              action: event,
+              farmId: context.farmId,
+              createdAt: createdAt.getTime(),
+            }) as GameState,
+            actions: [
+              ...context.actions,
+              {
+                ...event,
+                createdAt,
+              },
+            ],
+          };
+        }),
+      },
+    }),
+    {},
+  );
+}
+
+const PLACEMENT_EVENT_HANDLERS = createPlacementEventHandlers(true);
+
+const LANDSCAPING_PLACEMENT_EVENT_HANDLERS =
+  createPlacementEventHandlers(false);
 
 const EFFECT_EVENT_HANDLERS: TransitionsConfig<Context, BlockchainEvent> =
   getKeys(STATE_MACHINE_EFFECTS).reduce(
@@ -839,6 +867,10 @@ export type StateValues = BlockchainState[StateKeys];
 
 export type MachineState = State<Context, BlockchainEvent, BlockchainState>;
 
+/** Stable selectors for `useSelector` with `@xstate/react` (constant function identity). */
+export const selectGameState = (state: MachineState) => state.context.state;
+export const selectVerified = (state: MachineState) => state.context.verified;
+
 export type MachineInterpreter = Interpreter<
   Context,
   any,
@@ -878,10 +910,6 @@ export const saveGame = async (
     state: context.state,
     scene: sceneParam,
   });
-
-  // This gives the UI time to indicate that a save is taking place both when clicking save
-  // and when autosaving
-  await new Promise((res) => setTimeout(res, 500));
 
   return {
     saveAt,
@@ -1313,7 +1341,11 @@ export function startGame(authContext: AuthContext) {
                 // Wow, they haven't seen the VIP promo in 1 month
                 const readAt = getVipRead();
                 if (
-                  !hasVipAccess({ game: context.state, type: "full" }) &&
+                  !hasVipAccess({
+                    game: context.state,
+                    type: "full",
+                    now: Date.now(),
+                  }) &&
                   (!readAt ||
                     readAt.getTime() <
                       Date.now() - 1 * 31 * 24 * 60 * 60 * 1000)
@@ -1327,6 +1359,7 @@ export function startGame(authContext: AuthContext) {
                 const isExpiring =
                   vip &&
                   vip.expiresAt &&
+                  !hasLifetimeFarmerBanner(context.state) &&
                   vip.expiresAt < Date.now() + 3 * 24 * 60 * 60 * 1000 &&
                   // Haven't read since expiry approached
                   (readAt?.getTime() ?? 0) <
@@ -1337,6 +1370,7 @@ export function startGame(authContext: AuthContext) {
                 const hasExpired =
                   vip &&
                   vip.expiresAt &&
+                  !hasLifetimeFarmerBanner(context.state) &&
                   vip.expiresAt < Date.now() &&
                   // Hasn't read since expired
                   (readAt?.getTime() ?? 0) < vip.expiresAt;
@@ -1728,41 +1762,9 @@ export function startGame(authContext: AuthContext) {
         playing: {
           id: "playing",
           entry: "clearTransactionId",
-          invoke: {
-            /**
-             * An in game loop that checks if Blockchain becomes out of sync
-             * It is a rare event but it saves a user from making too much progress that would not be synced
-             */
-            src: (context) => (cb) => {
-              const interval = setInterval(
-                async () => {
-                  if (!context.farmAddress) return;
-
-                  const sessionID = await getSessionId(
-                    context.farmId as number,
-                  );
-
-                  if (sessionID !== context.sessionId) {
-                    cb("EXPIRED");
-                  }
-                },
-                1000 * 60 * 2,
-              );
-
-              return () => {
-                clearInterval(interval);
-              };
-            },
-            onError: [
-              {
-                target: "error",
-                actions: "assignErrorMessage",
-              },
-            ],
-          },
           on: {
             ...EFFECT_EVENT_HANDLERS,
-            ...GAME_EVENT_HANDLERS,
+            ...PLAYING_GAME_EVENT_HANDLERS,
             ...PLACEMENT_EVENT_HANDLERS,
             UPDATE_USERNAME: {
               actions: assign((context, event) => ({
@@ -1783,12 +1785,6 @@ export function startGame(authContext: AuthContext) {
             },
             REVEAL: {
               target: "revealing",
-            },
-            EXPIRED: {
-              target: "error",
-              actions: assign((_) => ({
-                errorCode: ERRORS.SESSION_EXPIRED as ErrorCode,
-              })),
             },
             RESET: {
               target: "refreshing",
@@ -2611,7 +2607,7 @@ export function startGame(authContext: AuthContext) {
             ],
           },
           on: {
-            ...PLACEMENT_EVENT_HANDLERS,
+            ...LANDSCAPING_PLACEMENT_EVENT_HANDLERS,
             SAVE: {
               actions: send(
                 (context) =>

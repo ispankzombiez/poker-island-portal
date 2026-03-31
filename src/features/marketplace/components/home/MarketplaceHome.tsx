@@ -5,6 +5,7 @@ import flowerIcon from "assets/icons/flower_token.webp";
 import crownIcon from "assets/icons/vip.webp";
 import { Route, Routes, useNavigate } from "react-router";
 import { Collection, preloadCollections } from "../Collection";
+import { Minigames } from "../Minigames";
 import { Modal } from "components/ui/Modal";
 import { CloseButtonPanel } from "features/game/components/CloseablePanel";
 import { MarketplaceProfile } from "../MarketplaceProfile";
@@ -24,6 +25,7 @@ import {
   getAccountTradedRestrictionSecondsLeft,
   isAccountTradedWithin90Days,
   MachineState,
+  selectGameState,
 } from "features/game/lib/gameMachine";
 import { TradeCooldownWidget } from "features/game/components/TradeCooldownWidget";
 import { ModalContext } from "features/game/components/modal/ModalProvider";
@@ -37,12 +39,11 @@ import { MarketplaceSearch } from "../MarketplaceSearch";
 import { EstimatedPrice } from "./EstimatedPrice";
 import { Filters } from "./Filters";
 import { CHAPTERS } from "features/game/types/chapters";
+import { useNow } from "lib/utils/hooks/useNow";
 
-const _hasTradeReputation = (state: MachineState) =>
-  hasReputation({
-    game: state.context.state,
-    reputation: Reputation.Cropkeeper,
-  });
+import { hasFeatureAccess } from "lib/flags";
+
+const _gameState = (state: MachineState) => state.context.state;
 export const MarketplaceNavigation: React.FC = () => {
   const navigate = useNavigate();
   const crabChapterStartMs = CHAPTERS["Crabs and Traps"].startDate.getTime();
@@ -77,18 +78,27 @@ export const MarketplaceNavigation: React.FC = () => {
     return () => window.clearTimeout(id);
   }, [hideLimited, crabChapterStartMs]);
 
+  const { t } = useTranslation();
+
+  const { gameService } = useContext(Context);
+  const gameState = useSelector(gameService, _gameState);
+  const showTokenMinigames = hasFeatureAccess(gameState, "TOKEN_MINIGAMES");
+
   useEffect(() => {
     const token = authState.context.user.rawToken as string;
     if (CONFIG.API_URL) preloadCollections(token, !hideLimited);
   }, [hideLimited, authState.context.user.rawToken]);
 
-  const { t } = useTranslation();
-
-  const { gameService } = useContext(Context);
   const price = gameService.getSnapshot().context.prices.sfl?.usd ?? 0.0;
   const { farmId } = gameService.getSnapshot().context;
 
-  const hasTradeReputation = useSelector(gameService, _hasTradeReputation);
+  const game = useSelector(gameService, selectGameState);
+  const now = useNow();
+  const hasTradeReputation = hasReputation({
+    game,
+    reputation: Reputation.Cropkeeper,
+    now,
+  });
   const accountTradedRecently = useSelector(gameService, (s) =>
     isAccountTradedWithin90Days(s.context),
   );
@@ -98,6 +108,7 @@ export const MarketplaceNavigation: React.FC = () => {
 
   const listingsLeft = getRemainingTrades({
     game: gameService.getSnapshot().context.state,
+    now,
   });
 
   const goToFlowerDashboard = () => {
@@ -112,6 +123,7 @@ export const MarketplaceNavigation: React.FC = () => {
             onClose={() => setShowFilters(false)}
             farmId={farmId}
             hideLimited={hideLimited}
+            showTokenMinigames={showTokenMinigames}
           />
           <EstimatedPrice price={price} />
           {/* Flower Dashboard Button */}
@@ -165,7 +177,11 @@ export const MarketplaceNavigation: React.FC = () => {
           <InnerPanel className="w-full flex-col mb-1">
             <MarketplaceSearch search={search} setSearch={setSearch} />
             <div className="flex-1">
-              <Filters farmId={farmId} hideLimited={hideLimited} />
+              <Filters
+                farmId={farmId}
+                hideLimited={hideLimited}
+                showTokenMinigames={showTokenMinigames}
+              />
             </div>
           </InnerPanel>
 
@@ -215,6 +231,11 @@ export const MarketplaceNavigation: React.FC = () => {
             <Routes>
               <Route path="/profile" element={<MarketplaceProfile />} />
               <Route path="/hot" element={<MarketplaceHotNow />} />
+              <Route
+                path="/minigames/:minigameSlug/:id"
+                element={<Tradeable hideLimited={hideLimited} />}
+              />
+              <Route path="/minigames" element={<Minigames />} />
               <Route
                 path="/collection/*"
                 element={<Collection hideLimited={hideLimited} />}

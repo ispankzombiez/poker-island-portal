@@ -65,6 +65,8 @@ import {
 import { FarmActivityName } from "./farmActivity";
 import { MilestoneName } from "./milestones";
 import {
+  AgedFishName,
+  PrimeAgedFishName,
   FishName,
   FishingBait,
   MarineMarvelName,
@@ -77,6 +79,8 @@ import {
   FlowerSeedName,
   MutantFlowerName,
 } from "./flowers";
+import { FermentationProductName } from "./fermentationProducts";
+import { PickledCropName } from "./pickled";
 import { translate } from "lib/i18n/translate";
 import { SpecialEvents } from "./specialEvents";
 import { TradeableName } from "../actions/sellMarketResource";
@@ -119,6 +123,8 @@ import { PetShopItemName } from "./petShop";
 import { League } from "features/leagues/leagues";
 import { Buff, BuffName } from "./buffs";
 import { CrustaceanChum, CrustaceanName, WaterTrapName } from "./crustaceans";
+import { SaltFarm } from "./salt";
+import type { AgingShed } from "../lib/agingShed";
 
 export type CraftingQueueItem = {
   id: string;
@@ -292,7 +298,10 @@ export type Coupons =
   | "Halloween Ticket 2025"
   | "Holiday Token 2025"
   | "Holiday Ticket 2025"
+  | "April Fools Token 2026"
+  | "April Fools Ticket 2026"
   | "Cheer"
+  | "CluckCoin"
   | Keys
   | ChapterTicket
   | ChapterRaffleTicket
@@ -432,6 +441,7 @@ export const COUPONS: Record<Coupons, { description: string }> = {
   },
   Bracelet: { description: "" },
   Cheer: { description: translate("description.cheer") },
+  CluckCoin: { description: translate("description.cluck.coin") },
   "Pet Cookie": { description: translate("description.petCookie") },
   Floater: { description: "Collected during the Crabs and Traps." },
   "Paw Prints Raffle Ticket": {
@@ -451,6 +461,12 @@ export const COUPONS: Record<Coupons, { description: string }> = {
   },
   "Holiday Ticket 2025": {
     description: translate("description.holidayTicket2025"),
+  },
+  "April Fools Token 2026": {
+    description: translate("description.aprilFoolsToken2026"),
+  },
+  "April Fools Ticket 2026": {
+    description: translate("description.aprilFoolsTicket2026"),
   },
 };
 
@@ -639,6 +655,8 @@ export type InventoryItemName =
   | FishingBait
   | CompostName
   | FishName
+  | AgedFishName
+  | PrimeAgedFishName
   | MarineMarvelName
   | OldFishName
   | FlowerName
@@ -666,7 +684,8 @@ export type InventoryItemName =
   | PetShopItemName
   | CrustaceanName
   | ChapterRaffleTicket
-  | MinigameCurrencyItemName;
+  | PickledCropName
+  | FermentationProductName;
 
 export type Inventory = Partial<Record<InventoryItemName, Decimal>>;
 
@@ -810,6 +829,9 @@ export type FruitPatch = {
 export type BuildingProduct = {
   name: CookableName | ProcessedResource;
   readyAt: number;
+  /**
+   * @deprecated Use per-item quantity fields instead.
+   */
   amount?: number;
   boost?: Partial<Record<InventoryItemName, number>>;
   skills?: Partial<Record<BumpkinRevampSkillName, boolean>>;
@@ -1390,7 +1412,8 @@ export type Currency =
   | "Easter Token 2025"
   | "Colors Token 2025"
   | "Halloween Token 2025"
-  | "Holiday Token 2025";
+  | "Holiday Token 2025"
+  | "April Fools Token 2026";
 
 export type ShopItemBase = {
   shortDescription: string;
@@ -1953,6 +1976,7 @@ export interface GameState {
   henHouse: AnimalBuilding;
   barn: AnimalBuilding;
   waterWell: UpgradableBuilding;
+  agingShed: AgingShed;
   petHouse: PetHouseBuilding;
 
   craftingBox: {
@@ -2044,6 +2068,7 @@ export interface GameState {
   prototypes?: {
     leagues?: League;
   };
+  saltFarm: SaltFarm;
 }
 
 export type AOE = Partial<

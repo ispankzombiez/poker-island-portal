@@ -197,7 +197,6 @@ export interface Context {
   method?: "google" | "wallet" | "wechat" | "fsl";
   accountTradedAt?: string;
   onChainRaffleReward?: RaffleSnapshotWinner;
-  playingCasinoIsland?: boolean;
 }
 
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
@@ -346,8 +345,6 @@ export type BlockchainEvent =
   | { type: "END_VISIT" }
   | { type: "PERSONHOOD_FINISHED"; verified: boolean }
   | { type: "PERSONHOOD_CANCELLED" }
-  | { type: "START_CASINO_ISLAND" }
-  | { type: "END_CASINO_ISLAND" }
   | GameEvent
   | LandscapeEvent
   | VisitEvent
@@ -559,7 +556,7 @@ const EFFECT_STATES = Object.values(STATE_MACHINE_EFFECTS).reduce(
               deviceTrackerId: context.deviceTrackerId as string,
               transactionId: context.transactionId as string,
               state: context.state,
-              scene: context.playingCasinoIsland ? "casino-island" : undefined,
+              scene: undefined,
             });
           }
 
@@ -695,7 +692,7 @@ const VISIT_EFFECT_STATES = Object.values(STATE_MACHINE_VISIT_EFFECTS).reduce(
               deviceTrackerId: context.deviceTrackerId as string,
               transactionId: context.transactionId as string,
               state: context.visitorState,
-              scene: context.playingCasinoIsland ? "casino-island" : undefined,
+              scene: undefined,
             });
           }
 
@@ -867,8 +864,8 @@ export const saveGame = async (
     };
   }
 
-  const sceneParam = context.playingCasinoIsland ? "casino-island" : undefined;
-  console.log("[SAVEGAME] Calling autosave with scene:", sceneParam, "playingCasinoIsland:", context.playingCasinoIsland);
+  const sceneParam = undefined;
+  console.log("[SAVEGAME] Calling autosave with scene:", sceneParam);
 
   const { verified, farm, announcements } = await autosave({
     farmId,
@@ -1128,7 +1125,7 @@ export function startGame(authContext: AuthContext) {
                   deviceTrackerId: context.deviceTrackerId as string,
                   transactionId: context.transactionId as string,
                   state: context.state,
-                  scene: context.playingCasinoIsland ? "casino-island" : undefined,
+                  scene: undefined,
                 });
               }
 
@@ -1853,22 +1850,6 @@ export function startGame(authContext: AuthContext) {
             VISIT: {
               target: "loadLandToVisit",
             },
-            START_CASINO_ISLAND: {
-              actions: assign((context) => {
-                console.log("[GAMEMACHINE] START_CASINO_ISLAND event received");
-                return {
-                  playingCasinoIsland: true,
-                };
-              }),
-            },
-            END_CASINO_ISLAND: {
-              actions: assign((context) => {
-                console.log("[GAMEMACHINE] END_CASINO_ISLAND event received");
-                return {
-                  playingCasinoIsland: false,
-                };
-              }),
-            },
           },
         },
         buyingSFL: {
@@ -2003,7 +1984,7 @@ export function startGame(authContext: AuthContext) {
                   deviceTrackerId: context.deviceTrackerId as string,
                   transactionId: context.transactionId as string,
                   state: context.state,
-                  scene: context.playingCasinoIsland ? "casino-island" : undefined,
+                  scene: undefined,
                 });
               }
 
@@ -2123,7 +2104,7 @@ export function startGame(authContext: AuthContext) {
                   deviceTrackerId: context.deviceTrackerId as string,
                   transactionId: context.transactionId as string,
                   state: context.state,
-                  scene: context.playingCasinoIsland ? "casino-island" : undefined,
+                  scene: undefined,
                 });
               }
 
@@ -2136,7 +2117,7 @@ export function startGame(authContext: AuthContext) {
                 deviceTrackerId: context.deviceTrackerId as string,
                 transactionId: context.transactionId as string,
                 state: context.state,
-                scene: context.playingCasinoIsland ? "casino-island" : undefined,
+                scene: undefined,
               });
 
               return {
@@ -2295,7 +2276,7 @@ export function startGame(authContext: AuthContext) {
                   deviceTrackerId: context.deviceTrackerId as string,
                   transactionId: context.transactionId as string,
                   state: context.state,
-                  scene: context.playingCasinoIsland ? "casino-island" : undefined,
+                  scene: undefined,
                 });
               }
 
@@ -2456,7 +2437,7 @@ export function startGame(authContext: AuthContext) {
                   deviceTrackerId: context.deviceTrackerId as string,
                   transactionId: context.transactionId as string,
                   state: context.state,
-                  scene: context.playingCasinoIsland ? "casino-island" : undefined,
+                  scene: undefined,
                 });
               }
 

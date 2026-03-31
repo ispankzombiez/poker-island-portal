@@ -33,6 +33,7 @@ import furikakeSprinkle from "assets/processedFoods/furikake_sprinkle.webp";
 import surimiRiceBowl from "assets/processedFoods/surimi_rice_bowl.webp";
 
 import gem from "assets/icons/gem.webp";
+import nightshadeTicket from "features/portal/nightshade-arcade/assets/nightshade_ticket.webp";
 import tradePoint from "assets/icons/trade_points_coupon.webp";
 import chip from "assets/icons/chip.png";
 
@@ -1129,6 +1130,7 @@ import tradingShrine from "assets/sfts/shrines/trading_shrine.webp";
 import divingHelmet from "assets/sfts/diving_helmet.webp";
 
 import { COUPONS, EASTER_EGG, FERTILISERS, InventoryItemName } from "./game";
+import { PORTAL_CURRENCIES, PORTAL_COUPONS } from "features/portal/nightshade-arcade/types/portalGame";
 
 import { CROPS, CROP_SEEDS, GREENHOUSE_CROPS, GREENHOUSE_SEEDS } from "./crops";
 import { AchievementName, ACHIEVEMENTS } from "./achievements";
@@ -5259,15 +5261,19 @@ export const ITEM_DETAILS: Items = {
     image: scarabBeetle,
     description: "",
   },
+  "Nightshade Ticket": {
+    image: nightshadeTicket,
+    description: PORTAL_COUPONS["Nightshade Ticket"].description,
+  },
   Gem: {
     image: gem,
     description: translate("description.gem"),
     translatedName: translate("currency.gem"),
   },
-  Chip: {
+  RavenCoin: {
     image: chip,
-    description: translate("description.chip"),
-    translatedName: translate("currency.chip"),
+    description: PORTAL_CURRENCIES.RavenCoin.description,
+    translatedName: translate("currency.ravenCoin"),
   },
   "Squeaky Chicken": {
     image: squeakyChicken,

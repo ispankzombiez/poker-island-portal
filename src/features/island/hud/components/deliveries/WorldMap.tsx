@@ -346,30 +346,6 @@ export const WorldMap: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         )}
       </div>
 
-      {/* Casino Island */}
-      <div
-        style={{
-          width: "22%",
-          height: "28%",
-          border: showDebugBorders ? "2px solid red" : "",
-          position: "absolute",
-          right: "20%",
-          bottom: "2%",
-        }}
-        className="flex justify-center items-center cursor-pointer"
-        onClick={() => {
-          travel.play();
-          // Disable autosave while playing casino island due to backend issues
-          gameService.send("START_CASINO_ISLAND");
-          navigate("/world/casino-island");
-          onClose();
-        }}
-      >
-        <span className="map-text text-xxs sm:text-sm">
-          {t("world.casino")}
-        </span>
-      </div>
-
       {/* Retreat Island */}
       <div
         style={{

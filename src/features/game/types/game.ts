@@ -588,7 +588,7 @@ export type Bounties = {
   bonusClaimedAt?: number;
 };
 
-export type MinigameCurrencyItemName = "Chip";
+export type MinigameCurrencyItemName = "RavenCoin";
 
 export type InventoryItemName =
   | AnimalResource
@@ -1942,7 +1942,7 @@ export interface GameState {
     resource: DonationItemName;
     amount: Decimal;
   };
-  dailyChipsLastClaimDate?: string;
+  dailyRavenCoinsLastClaimDate?: string;
   desert: Desert;
 
   ban: {

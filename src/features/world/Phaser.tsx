@@ -60,8 +60,6 @@ import { PlayerSelectionList } from "./ui/PlayerSelectionList";
 import { StreamScene } from "./scenes/StreamScene";
 import { LoveIslandScene } from "./scenes/LoveIslandScene";
 import { hasFeatureAccess } from "lib/flags";
-import { WorldHud } from "features/island/hud/WorldHud";
-import { CasinoIslandScene } from "features/portal/example/CasinoIslandScene";
 import { PlayerModal } from "features/social/PlayerModal";
 import { MachineState as GameMachineState } from "features/game/lib/gameMachine";
 import { RewardModal } from "features/social/RewardModal";
@@ -160,7 +158,6 @@ export const PhaserComponent: React.FC<Props> = ({ mmoService, route }) => {
     InfernosScene,
     StreamScene,
     LoveIslandScene,
-    CasinoIslandScene,
   ];
 
   useEffect(() => {

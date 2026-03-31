@@ -40,6 +40,7 @@ import { IncineratorModal } from "features/goblins/incinerator";
 import { Context } from "features/game/GameProvider";
 import { PetShop } from "features/pets/petShop/PetShop";
 import { Streams } from "features/game/components/modal/components/Streams";
+import { NightshadeArcadeShop } from "features/portal/nightshade-arcade/components/NightshadeArcadeShop";
 
 class NpcModalManager {
   private listener?: (npc: NPCName, isOpen: boolean) => void;
@@ -298,6 +299,7 @@ export const NPCModals: React.FC<Props> = ({ id }) => {
         )}
         {npc === "eldric" && <FactionShop onClose={closeModal} />}
         {npc === "pet" && <FactionPetPanel onClose={closeModal} />}
+        {npc === "prizedesk" && <NightshadeArcadeShop onClose={closeModal} />}
       </Modal>
 
       {npc === "hammerin harry" && (

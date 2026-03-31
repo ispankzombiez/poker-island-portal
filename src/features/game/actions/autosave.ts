@@ -127,12 +127,6 @@ let autosaveErrors = 0;
 
 export async function autosave(request: Request, retries = 0) {
   if (!API_URL) return { verified: true };
-
-  // Skip autosave on Casino Island due to backend issues
-  if (request.scene === "casino-island") {
-    console.log("[AUTOSAVE] Skipping autosave on Casino Island");
-    return { verified: true };
-  }
   
   if (request.scene) {
     console.log("[AUTOSAVE] Scene parameter received:", request.scene);

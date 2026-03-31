@@ -108,7 +108,6 @@ const SCENE_ACCESS: Partial<Record<SceneId, (game: GameState) => boolean>> = {
     const level = getBumpkinLevel(game.bumpkin?.experience ?? 0);
     return level >= 5;
   },
-  "casino-island": () => true, // Allow all players for now
 };
 
 export const MMO: React.FC<MMOProps> = ({ isCommunity }) => {

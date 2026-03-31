@@ -34,12 +34,6 @@ export const SPAWNS: () => SpawnLocation = () => ({
       y: 450 - randomYOffset,
     },
   },
-  "casino-island": {
-    default: {
-      x: 240,
-      y: 450,
-    },
-  },
   goblin_house: {
     default: {
       x: 239,

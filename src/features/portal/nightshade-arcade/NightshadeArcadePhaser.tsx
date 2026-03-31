@@ -4,22 +4,19 @@ import NinePatchPlugin from "phaser3-rex-plugins/plugins/ninepatch-plugin.js";
 import VirtualJoystickPlugin from "phaser3-rex-plugins/plugins/virtualjoystick-plugin.js";
 
 import { Preloader } from "features/world/scenes/Preloader";
-import { PortalContext } from "./lib/PortalProvider";
+import { PortalContext } from "./lib/NightshadeArcadePortalProvider";
 import { useActor } from "@xstate/react";
-import { PortalExampleScene } from "./PortalExampleScene";
-import { NPCModals } from "features/world/ui/NPCModals";
-import { InteractableModals } from "features/world/ui/InteractableModals";
+import { NightshadeArcadeScene } from "./NightshadeArcadeScene";
 import { CONFIG } from "lib/config";
 
-export const PortalExamplePhaser: React.FC = () => {
+export const NightshadeArcadePhaser: React.FC = () => {
   const { portalService } = useContext(PortalContext);
   const [portalState] = useActor(portalService);
 
   const game = useRef<Game>(undefined);
 
-  // Determine which scene to load based on PORTAL_APP config
-  let scene = "portal_example";
-  let scenes: any[] = [Preloader, PortalExampleScene];
+  const scene = "nightshade-arcade";
+  const scenes: any[] = [Preloader, NightshadeArcadeScene];
 
   useEffect(() => {
     const config: Phaser.Types.Core.GameConfig = {
@@ -99,10 +96,6 @@ export const PortalExamplePhaser: React.FC = () => {
           height: "100%",
         }}
       />
-
-      {/* NPCModals and InteractableModals require GameProvider context, which is not available in portal mode */}
-      {/* <NPCModals id={portalState.context.id as number} /> */}
-      {/* <InteractableModals id={portalState.context.id as number} scene={scene as any} /> */}
     </div>
   );
 };

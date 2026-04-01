@@ -89,11 +89,14 @@ export class NightshadeArcadeScene extends BaseScene {
                   return;
                 }
 
-                // Handle machine interactions
-                if (name?.includes("Machine 1")) {
+                // Use exact matching so names like "Machine 10" don't trigger "Machine 1".
+                const machineName = (name ?? "").trim().toLowerCase();
+
+                if (machineName === "machine 1") {
                   minigamesEventEmitter.emit({ type: "poker" });
                 }
-                if (name?.includes("Machine 2")) {
+
+                if (machineName === "machine 2") {
                   minigamesEventEmitter.emit({ type: "blackjack" });
                 }
               }

@@ -730,14 +730,16 @@ export const GoFishGame: React.FC<GoFishGameProps> = ({ onClose }) => {
                     {cardsOfRank.map((card, cardIndex) => (
                       <div
                         key={`player-${card.suit}-${card.rank}-${groupIndex}-${cardIndex}`}
-                        className="w-16 h-24 border border-white/30 rounded bg-white text-black p-1 flex flex-col justify-between"
+                        className="w-16 h-24 border border-white/30 rounded bg-white text-black p-1 relative"
                       >
-                        <span className="font-bold text-sm leading-none">
+                        <div className="absolute top-1 left-1">
+                          <SquareIcon icon={suitImages[card.suit]} width={10} />
+                        </div>
+                        <div className="absolute bottom-1 right-1 rotate-180">
+                          <SquareIcon icon={suitImages[card.suit]} width={10} />
+                        </div>
+                        <span className="absolute inset-0 grid place-items-center font-bold text-2xl leading-none">
                           {card.rank}
-                        </span>
-                        <SquareIcon icon={suitImages[card.suit]} width={14} />
-                        <span className="text-[10px] text-center leading-none">
-                          {card.suit}
                         </span>
                       </div>
                     ))}

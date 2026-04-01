@@ -10,7 +10,6 @@ import { useSelector } from "@xstate/react";
 import { Card } from "../poker/types";
 import { BlackjackDeck } from "./deck";
 import { OuterPanel, InnerPanel } from "components/ui/Panel";
-import { SquareIcon } from "components/ui/SquareIcon";
 import { ITEM_DETAILS } from "features/game/types/images";
 import { startAttempt, submitScore } from "features/portal/lib/portalUtil";
 import { PortalContext } from "../../lib/NightshadeArcadePortalProvider";
@@ -422,8 +421,8 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({
   const isResultsStage =
     gameState.status === "gameover" || gameState.status === "dealer_turn";
   const cardSizeClass = isResultsStage ? "w-12 h-[4.5rem]" : "w-16 h-24";
-  const cardFontClass = isResultsStage ? "text-sm" : "text-base";
-  const iconWidth = isResultsStage ? 16 : 20;
+  const centerRankClass = isResultsStage ? "text-lg" : "text-2xl";
+  const iconWidth = isResultsStage ? 8 : 10;
 
   const CardDisplay = ({
     card,
@@ -447,13 +446,28 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({
       <div
         className={`${cardSizeClass} bg-white border-2 border-black rounded-lg shadow-lg overflow-hidden relative`}
       >
-        <div
-          className={`absolute top-1 left-1 ${cardFontClass} font-bold leading-none z-10 text-black`}
-        >
-          {card.rank}
+        <div className="absolute top-1 left-1 z-10">
+          <img
+            src={suitImages[card.suit]}
+            alt="suit"
+            className="block"
+            style={{ width: iconWidth * 2, height: iconWidth * 2 }}
+          />
+        </div>
+        <div className="absolute bottom-1 right-1 z-10 rotate-180">
+          <img
+            src={suitImages[card.suit]}
+            alt="suit"
+            className="block"
+            style={{ width: iconWidth * 2, height: iconWidth * 2 }}
+          />
         </div>
         <div className="w-full h-full flex items-center justify-center">
-          <SquareIcon icon={suitImages[card.suit]} width={iconWidth} />
+          <span
+            className={`${centerRankClass} font-bold leading-none text-black`}
+          >
+            {card.rank}
+          </span>
         </div>
       </div>
     );

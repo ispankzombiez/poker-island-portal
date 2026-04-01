@@ -103,6 +103,10 @@ export class NightshadeArcadeScene extends BaseScene {
                 if (machineName === "machine 3") {
                   minigamesEventEmitter.emit({ type: "gofish" });
                 }
+
+                if (machineName === "machine 4") {
+                  minigamesEventEmitter.emit({ type: "uno" });
+                }
               }
             });
         }

@@ -703,8 +703,8 @@ export const PokerGame: React.FC<PokerGameProps> = ({
     hidden?: boolean;
   }) => {
     const cardSizeClass = isResultsStage ? "w-12 h-[4.5rem]" : "w-16 h-24";
-    const cardFontClass = isResultsStage ? "text-sm" : "text-base";
-    const iconWidth = isResultsStage ? 16 : 20;
+    const centerRankClass = isResultsStage ? "text-lg" : "text-2xl";
+    const iconWidth = isResultsStage ? 8 : 10;
 
     if (hidden) {
       return (
@@ -730,15 +730,18 @@ export const PokerGame: React.FC<PokerGameProps> = ({
       <div
         className={`${cardSizeClass} bg-white border-2 border-black rounded-lg shadow-lg overflow-hidden relative`}
       >
-        {/* Rank in corner */}
-        <div
-          className={`absolute top-1 left-1 ${cardFontClass} font-bold leading-none z-10 text-black`}
-        >
-          {card.rank}
-        </div>
-        {/* Suit icon centered */}
-        <div className="w-full h-full flex items-center justify-center">
+        <div className="absolute top-1 left-1 z-10">
           <SquareIcon icon={suitImages[card.suit]} width={iconWidth} />
+        </div>
+        <div className="absolute bottom-1 right-1 z-10 rotate-180">
+          <SquareIcon icon={suitImages[card.suit]} width={iconWidth} />
+        </div>
+        <div className="w-full h-full flex items-center justify-center">
+          <span
+            className={`${centerRankClass} font-bold leading-none text-black`}
+          >
+            {card.rank}
+          </span>
         </div>
       </div>
     );

@@ -7,6 +7,7 @@ export const NIGHTSHADE_ARCADE_MINIGAMES: MinigameName[] = [
   "gofish",
   "roulette",
   "slots",
+  "uno",
 ];
 
 export const POKER_STARTING_CHIPS = 100;

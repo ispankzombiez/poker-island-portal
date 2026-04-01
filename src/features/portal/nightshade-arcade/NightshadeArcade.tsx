@@ -95,8 +95,17 @@ export const NightshadeArcade: React.FC = () => {
       setShowMinigameModal(true);
     });
 
+    const unsubscribeBlackjack = minigamesEventEmitter.subscribe(
+      "blackjack",
+      () => {
+        setActiveMinigame("blackjack");
+        setShowMinigameModal(true);
+      },
+    );
+
     return () => {
       unsubscribePoker();
+      unsubscribeBlackjack();
     };
   }, []);
 

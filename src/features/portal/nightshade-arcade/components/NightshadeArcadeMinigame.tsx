@@ -1,6 +1,7 @@
 import React from "react";
 import { MinigameName } from "../types";
 import { PokerGame } from "../mini-games/poker/PokerGame";
+import { BlackjackGame } from "../mini-games/black-jack/BlackjackGame";
 
 interface Props {
   gameName: MinigameName;
@@ -20,23 +21,20 @@ export const NightshadeArcadeMinigame: React.FC<Props> = ({
     case "poker":
       return <PokerGame initialChips={100} onClose={onClose} />;
     case "blackjack":
-      // TODO: Implement blackjack (to be created)
-      return (
-        <div style={{ padding: "20px", color: "#fff" }}>
-          <p>Blackjack coming soon!</p>
-        </div>
-      );
+      return <BlackjackGame initialChips={100} onClose={onClose} />;
     case "roulette":
       // TODO: Implement roulette (to be created)
       return (
         <div style={{ padding: "20px", color: "#fff" }}>
-          <p>Roulette coming soon!</p>
+          <p>{"Roulette coming soon!"}</p>
         </div>
       );
     default:
       return (
         <div style={{ padding: "20px", color: "#fff" }}>
-          <p>Game not found: {gameName}</p>
+          <p>
+            {"Game not found:"} {gameName}
+          </p>
         </div>
       );
   }

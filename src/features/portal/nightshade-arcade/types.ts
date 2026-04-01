@@ -6,7 +6,12 @@ import { GameState } from "features/game/types/game";
 
 export type PortalGameState = GameState;
 
-export type MinigameName = "poker" | "slots" | "blackjack" | "roulette";
+export type MinigameName =
+  | "poker"
+  | "slots"
+  | "blackjack"
+  | "roulette"
+  | "gofish";
 
 export interface Coordinates {
   x: number;

@@ -4,6 +4,7 @@ import { MinigameName } from "features/game/types/minigames";
 export const NIGHTSHADE_ARCADE_MINIGAMES: MinigameName[] = [
   "poker",
   "blackjack",
+  "gofish",
   "roulette",
   "slots",
 ];

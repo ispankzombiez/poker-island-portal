@@ -3,7 +3,7 @@
  * Manages communication between the portal scene and minigame modals
  */
 
-type MinigameType = "poker" | "slots" | "roulette" | "blackjack";
+type MinigameType = "poker" | "slots" | "roulette" | "blackjack" | "gofish";
 
 interface MinigameEvent {
   type: MinigameType;

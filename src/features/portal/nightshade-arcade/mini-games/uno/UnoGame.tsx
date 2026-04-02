@@ -669,6 +669,12 @@ export const UnoGame: React.FC<UnoGameProps> = ({ onClose }) => {
     const w = small ? "w-10 h-14" : "w-14 h-20";
     const centerFaceClass = small ? "text-base" : "text-2xl";
     const cornerIconWidth = small ? 6 : 8;
+    const cornerBonusClass = small ? "text-[9px]" : "text-xs";
+
+    const isDrawTwo = card.face === "DrawTwo";
+    const isWildDrawFour = card.face === "WildDrawFour";
+    const cornerBonus = isDrawTwo ? "+2" : isWildDrawFour ? "+4" : null;
+    const centerLabel = isWildDrawFour ? "Wild" : isDrawTwo ? "+2" : card.face;
 
     if (faceDown) {
       return (
@@ -693,20 +699,34 @@ export const UnoGame: React.FC<UnoGameProps> = ({ onClose }) => {
             : "cursor-default"
         } ${highlight ? "ring-2 ring-yellow-400" : ""} ${disabled ? "opacity-50" : ""}`}
       >
-        {card.color !== "Wild" && (
+        {card.color !== "Wild" && !cornerBonus && (
           <div className="absolute top-1 left-1">
             <SquareIcon icon={suitImages[card.color]} width={cornerIconWidth} />
           </div>
         )}
-        {card.color !== "Wild" && (
+        {card.color !== "Wild" && !cornerBonus && (
           <div className="absolute bottom-1 right-1 rotate-180">
             <SquareIcon icon={suitImages[card.color]} width={cornerIconWidth} />
           </div>
         )}
+        {cornerBonus && (
+          <span
+            className={`absolute top-1 left-1 font-bold ${cornerBonusClass} leading-none`}
+          >
+            {cornerBonus}
+          </span>
+        )}
+        {cornerBonus && (
+          <span
+            className={`absolute bottom-1 right-1 rotate-180 font-bold ${cornerBonusClass} leading-none`}
+          >
+            {cornerBonus}
+          </span>
+        )}
         <span
           className={`absolute inset-0 grid place-items-center font-bold ${centerFaceClass} leading-none`}
         >
-          {card.face}
+          {centerLabel}
         </span>
       </button>
     );

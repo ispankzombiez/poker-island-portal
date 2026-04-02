@@ -5,6 +5,7 @@ import { BlackjackGame } from "../mini-games/black-jack/BlackjackGame";
 import { GoFishGame } from "../mini-games/go-fish/GoFishGame";
 import { UnoGame } from "../mini-games/uno/UnoGame";
 import { SolitaireGame } from "../mini-games/solitaire/SolitaireGame";
+import { GoblinInvadersGame } from "../mini-games/goblin-invaders/GoblinInvadersGame";
 
 interface Props {
   gameName: MinigameName;
@@ -31,6 +32,8 @@ export const NightshadeArcadeMinigame: React.FC<Props> = ({
       return <UnoGame onClose={onClose} />;
     case "solitaire":
       return <SolitaireGame onClose={onClose} />;
+    case "goblin-invaders":
+      return <GoblinInvadersGame onClose={onClose} />;
     case "roulette":
       // TODO: Implement roulette (to be created)
       return (

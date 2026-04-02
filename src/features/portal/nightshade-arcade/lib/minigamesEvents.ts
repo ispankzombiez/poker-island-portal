@@ -10,7 +10,8 @@ type MinigameType =
   | "blackjack"
   | "gofish"
   | "uno"
-  | "solitaire";
+  | "solitaire"
+  | "goblin-invaders";
 
 interface MinigameEvent {
   type: MinigameType;

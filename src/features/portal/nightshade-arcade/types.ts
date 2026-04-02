@@ -13,7 +13,8 @@ export type MinigameName =
   | "roulette"
   | "gofish"
   | "uno"
-  | "solitaire";
+  | "solitaire"
+  | "goblin-invaders";
 
 export interface Coordinates {
   x: number;

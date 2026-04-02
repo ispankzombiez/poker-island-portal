@@ -111,6 +111,10 @@ export class NightshadeArcadeScene extends BaseScene {
                 if (machineName === "machine 5") {
                   minigamesEventEmitter.emit({ type: "solitaire" });
                 }
+
+                if (machineName === "machine 6") {
+                  minigamesEventEmitter.emit({ type: "goblin-invaders" });
+                }
               }
             });
         }

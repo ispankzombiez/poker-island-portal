@@ -121,12 +121,21 @@ export const NightshadeArcade: React.FC = () => {
       },
     );
 
+    const unsubscribeGoblinInvaders = minigamesEventEmitter.subscribe(
+      "goblin-invaders",
+      () => {
+        setActiveMinigame("goblin-invaders");
+        setShowMinigameModal(true);
+      },
+    );
+
     return () => {
       unsubscribePoker();
       unsubscribeBlackjack();
       unsubscribeGoFish();
       unsubscribeUno();
       unsubscribeSolitaire();
+      unsubscribeGoblinInvaders();
     };
   }, []);
 

@@ -1,8 +1,5 @@
 import { GameState } from "features/game/types/game";
-import {
-  getTodayKey,
-  isRewardRunAvailableForMinigame,
-} from "../poker/session";
+import { getTodayKey, isRewardRunAvailableForMinigame } from "../poker/session";
 
 export const SOLITAIRE_RAVEN_COIN_REWARD = 1;
 
@@ -18,9 +15,9 @@ export type SolitaireDifficulty = {
 };
 
 export const SOLITAIRE_DIFFICULTIES: SolitaireDifficulty[] = [
-  { name: "easy", label: "Easy", drawCount: 1, maxPasses: 2, weight: 3 },
-  { name: "medium", label: "Medium", drawCount: 1, maxPasses: 1, weight: 3 },
-  { name: "hard", label: "Hard", drawCount: 3, maxPasses: 0, weight: 2 },
+  { name: "easy", label: "Easy", drawCount: 1, maxPasses: 5, weight: 3 },
+  { name: "medium", label: "Medium", drawCount: 1, maxPasses: 3, weight: 3 },
+  { name: "hard", label: "Hard", drawCount: 3, maxPasses: 1, weight: 2 },
 ];
 
 export const getSolitaireDifficultyFromSeed = (

@@ -28,7 +28,10 @@ import { Card, CardRank, CardSuit } from "../poker/types";
 import {
   getSolitaireDifficulty,
   isSolitaireRewardRunAvailable,
+  SOLITAIRE_DIFFICULTIES,
+  SolitaireDifficulty,
   SOLITAIRE_RAVEN_COIN_REWARD,
+  SolitaireDifficultyName,
   SolitaireMode,
 } from "./session";
 import {
@@ -192,6 +195,177 @@ const createInitialState = (
   };
 };
 
+/**
+ * Greedy forward solver with deterministic move priority.
+ * Returns true only if it finds a complete winning path within the iteration
+ * limit, giving a guaranteed-solvable certificate for that deal.
+ *
+ * Move order:
+ *  1. Tableau top → foundation
+ *  2. Waste top → foundation
+ *  3. Full stack moves that reveal a face-down card (prefer most fd)
+ *  4. Waste top → tableau (prefer piles with most fd cards)
+ *  5. Draw from stock / reset waste
+ *  6. Any partial-stack tableau → tableau (excludes trivial king cycling)
+ */
+const greedySolve = (initial: SolitaireState, drawCount: number): boolean => {
+  const tab = initial.tableau.map((p) => ({
+    fd: [...p.faceDown],
+    fu: [...p.faceUp],
+  }));
+  const fnd: Record<CardSuit, number> = {
+    Kale: 0,
+    Barley: 0,
+    Wheat: 0,
+    Radish: 0,
+  };
+  let stock = [...initial.stock];
+  let waste: Card[] = [];
+  let passes = initial.passesRemaining;
+
+  const rv = (c: Card) => RANK_VALUE[c.rank];
+  const dk = (s: CardSuit) => s === "Kale" || s === "Radish";
+  const flip = (i: number) => {
+    if (!tab[i].fu.length && tab[i].fd.length) tab[i].fu.push(tab[i].fd.pop()!);
+  };
+  const toFnd = (c: Card) =>
+    fnd[c.suit] === 0 ? c.rank === "A" : rv(c) === fnd[c.suit] + 1;
+  const onPile = (c: Card, i: number) => {
+    const fu = tab[i].fu;
+    if (!fu.length) return c.rank === "K";
+    const top = fu[fu.length - 1];
+    return dk(c.suit) !== dk(top.suit) && rv(c) === rv(top) - 1;
+  };
+
+  for (let it = 0; it < 3000; it++) {
+    if (SUITS.every((s) => fnd[s] === 13)) return true;
+
+    let moved = false;
+
+    // 1. Tableau top → foundation
+    for (let i = 0; i < 7 && !moved; i++) {
+      const fu = tab[i].fu;
+      if (!fu.length) continue;
+      const top = fu[fu.length - 1];
+      if (toFnd(top)) {
+        fu.pop();
+        fnd[top.suit]++;
+        flip(i);
+        moved = true;
+      }
+    }
+    if (moved) continue;
+
+    // 2. Waste top → foundation
+    if (waste.length) {
+      const top = waste[waste.length - 1];
+      if (toFnd(top)) {
+        waste.pop();
+        fnd[top.suit]++;
+        moved = true;
+      }
+    }
+    if (moved) continue;
+
+    // 3. Full-stack tableau move that reveals a face-down card
+    {
+      let bestFd = 0,
+        bSrc = -1,
+        bDst = -1;
+      for (let src = 0; src < 7; src++) {
+        const fu = tab[src].fu;
+        if (!fu.length || !tab[src].fd.length) continue;
+        for (let dst = 0; dst < 7; dst++) {
+          if (src === dst || !onPile(fu[0], dst)) continue;
+          if (tab[src].fd.length > bestFd) {
+            bestFd = tab[src].fd.length;
+            bSrc = src;
+            bDst = dst;
+          }
+        }
+      }
+      if (bSrc >= 0) {
+        tab[bDst].fu.push(...tab[bSrc].fu.splice(0));
+        flip(bSrc);
+        moved = true;
+      }
+    }
+    if (moved) continue;
+
+    // 4. Waste top → tableau (prefer piles with most fd)
+    if (waste.length) {
+      const top = waste[waste.length - 1];
+      let best = -1;
+      for (let i = 0; i < 7; i++) {
+        if (!onPile(top, i)) continue;
+        if (best === -1 || tab[i].fd.length > tab[best].fd.length) best = i;
+      }
+      if (best >= 0) {
+        waste.pop();
+        tab[best].fu.push(top);
+        moved = true;
+      }
+    }
+    if (moved) continue;
+
+    // 5. Draw from stock / reset waste
+    if (stock.length) {
+      const n = Math.min(drawCount, stock.length);
+      waste.push(...stock.splice(stock.length - n, n));
+      moved = true;
+    } else if (passes > 0 && waste.length) {
+      stock = [...waste].reverse();
+      waste = [];
+      passes--;
+      moved = true;
+    }
+    if (moved) continue;
+
+    // 6. Any partial-stack tableau → tableau (skip trivial king-to-empty cycling)
+    {
+      let found = false;
+      for (let src = 0; src < 7 && !found; src++) {
+        const fu = tab[src].fu;
+        for (let start = 0; start < fu.length && !found; start++) {
+          for (let dst = 0; dst < 7 && !found; dst++) {
+            if (src === dst || !onPile(fu[start], dst)) continue;
+            if (start === 0 && !tab[src].fd.length && !tab[dst].fu.length)
+              continue;
+            tab[dst].fu.push(...tab[src].fu.splice(start));
+            flip(src);
+            found = true;
+          }
+        }
+      }
+      if (found) moved = true;
+    }
+    if (moved) continue;
+
+    break;
+  }
+
+  return SUITS.every((s) => fnd[s] === 13);
+};
+
+/**
+ * Tries up to 100 consecutive seeds until greedySolve confirms solvability.
+ * With ~82% of random Klondike deals being solvable the chance of all 100
+ * failing is astronomically small. Falls back to the original seed as a safety
+ * net so the game always starts.
+ */
+const createSolvableDeal = (
+  seed: number,
+  maxPasses: number,
+  drawCount: number,
+): SolitaireState => {
+  for (let i = 0; i < 100; i++) {
+    const trySeed = (seed + i) >>> 0;
+    const state = createInitialState(trySeed, maxPasses);
+    if (greedySolve(state, drawCount)) return state;
+  }
+  return createInitialState(seed, maxPasses);
+};
+
 const canPlaceOnTableau = (movingCard: Card, targetTop?: Card) => {
   if (!targetTop) {
     return movingCard.rank === "K";
@@ -244,12 +418,19 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
   const [gameState, setGameState] = useState<SolitaireState | null>(null);
   const [rewardGranted, setRewardGranted] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showPracticeDifficultyPrompt, setShowPracticeDifficultyPrompt] =
+    useState(false);
+  const [practiceDifficultyName, setPracticeDifficultyName] =
+    useState<SolitaireDifficultyName>(todaysDifficulty.name);
+  const [activeDifficulty, setActiveDifficulty] =
+    useState<SolitaireDifficulty>(todaysDifficulty);
   const undoHistoryRef = useRef<SolitaireState[]>([]);
   const [undoCount, setUndoCount] = useState(0);
   const [undosRemaining, setUndosRemaining] = useState(MAX_UNDOS_PER_GAME);
 
   const returnToMenu = useCallback(() => {
     setShowExitConfirm(false);
+    setShowPracticeDifficultyPrompt(false);
     setSessionMode(null);
     setGameState(null);
     undoHistoryRef.current = [];
@@ -280,19 +461,38 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
   }, []);
 
   const startSession = useCallback(
-    (mode: SolitaireMode) => {
+    (
+      mode: SolitaireMode,
+      practiceDifficultyOverride?: SolitaireDifficultyName,
+    ) => {
       if (mode === "reward" && !hasRewardRun) return;
 
       const seed = getRunSeed();
-      const difficulty = getSolitaireDifficulty();
 
+      const selectedPracticeDifficulty =
+        SOLITAIRE_DIFFICULTIES.find(
+          (d) =>
+            d.name === (practiceDifficultyOverride ?? practiceDifficultyName),
+        ) ?? todaysDifficulty;
+
+      const runDifficulty =
+        mode === "reward" ? todaysDifficulty : selectedPracticeDifficulty;
+
+      setActiveDifficulty(runDifficulty);
       setSessionMode(mode);
       setRewardGranted(false);
       setShowExitConfirm(false);
+      setShowPracticeDifficultyPrompt(false);
       undoHistoryRef.current = [];
       setUndoCount(0);
       setUndosRemaining(MAX_UNDOS_PER_GAME);
-      setGameState(createInitialState(seed, difficulty.maxPasses));
+      setGameState(
+        createSolvableDeal(
+          seed,
+          runDifficulty.maxPasses,
+          runDifficulty.drawCount,
+        ),
+      );
 
       if (mode === "reward") {
         portalService.send({
@@ -302,7 +502,13 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
         startAttempt();
       }
     },
-    [getRunSeed, hasRewardRun, portalService],
+    [
+      getRunSeed,
+      hasRewardRun,
+      portalService,
+      practiceDifficultyName,
+      todaysDifficulty,
+    ],
   );
 
   const drawFromStock = useCallback(() => {
@@ -311,7 +517,7 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
 
       if (previous.stock.length > 0) {
         const drawCount = Math.min(
-          todaysDifficulty.drawCount,
+          activeDifficulty.drawCount,
           previous.stock.length,
         );
         const stock = [...previous.stock];
@@ -339,7 +545,7 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
 
       return previous;
     });
-  }, [setGameStateWithUndo, todaysDifficulty.drawCount]);
+  }, [setGameStateWithUndo, activeDifficulty.drawCount]);
 
   const selectWaste = useCallback(() => {
     setGameState((previous) => {
@@ -591,6 +797,112 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
     setGameState(previousSnapshot);
   }, [undosRemaining]);
 
+  const smartMove = useCallback(
+    (source: "waste" | { pileIndex: number; cardIndex: number }) => {
+      setGameStateWithUndo((previous) => {
+        if (!previous) return previous;
+
+        const tableau = previous.tableau.map((pile) => ({
+          faceDown: [...pile.faceDown],
+          faceUp: [...pile.faceUp],
+        }));
+        let waste = [...previous.waste];
+
+        let movingCard: Card | undefined;
+        let isTopCard: boolean;
+
+        if (source === "waste") {
+          movingCard = waste[waste.length - 1];
+          isTopCard = true;
+        } else {
+          const pile = tableau[source.pileIndex];
+          movingCard = pile.faceUp[source.cardIndex];
+          isTopCard = source.cardIndex === pile.faceUp.length - 1;
+        }
+
+        if (!movingCard) return previous;
+
+        // 1. Foundation first (top card only)
+        if (isTopCard) {
+          const foundation = previous.foundations[movingCard.suit];
+          if (canPlaceOnFoundation(movingCard, foundation)) {
+            if (source === "waste") {
+              waste = waste.slice(0, -1);
+            } else {
+              const sp = tableau[source.pileIndex];
+              sp.faceUp = sp.faceUp.slice(0, -1);
+              if (sp.faceUp.length === 0 && sp.faceDown.length > 0) {
+                const flipped = sp.faceDown.pop();
+                if (flipped) sp.faceUp.push(flipped);
+              }
+            }
+            return {
+              ...previous,
+              tableau,
+              waste,
+              foundations: {
+                ...previous.foundations,
+                [movingCard.suit]: [...foundation, movingCard],
+              },
+              selected: null,
+              moves: previous.moves + 1,
+            };
+          }
+        }
+
+        // 2. Tableau pile
+        const movingCards: Card[] =
+          source === "waste"
+            ? [movingCard]
+            : tableau[
+                (source as { pileIndex: number; cardIndex: number }).pileIndex
+              ].faceUp.slice(
+                (source as { pileIndex: number; cardIndex: number }).cardIndex,
+              );
+
+        for (let i = 0; i < tableau.length; i++) {
+          if (
+            source !== "waste" &&
+            (source as { pileIndex: number }).pileIndex === i
+          )
+            continue;
+          const targetPile = tableau[i];
+          const targetTop = targetPile.faceUp[targetPile.faceUp.length - 1];
+          if (!canPlaceOnTableau(movingCards[0], targetTop)) continue;
+
+          if (source === "waste") {
+            waste = waste.slice(0, -1);
+          } else {
+            const sp =
+              tableau[
+                (source as { pileIndex: number; cardIndex: number }).pileIndex
+              ];
+            sp.faceUp = sp.faceUp.slice(
+              0,
+              (source as { pileIndex: number; cardIndex: number }).cardIndex,
+            );
+            if (sp.faceUp.length === 0 && sp.faceDown.length > 0) {
+              const flipped = sp.faceDown.pop();
+              if (flipped) sp.faceUp.push(flipped);
+            }
+          }
+
+          targetPile.faceUp = [...targetPile.faceUp, ...movingCards];
+          return {
+            ...previous,
+            tableau,
+            waste,
+            selected: null,
+            moves: previous.moves + 1,
+          };
+        }
+
+        return previous;
+      });
+    },
+    [setGameStateWithUndo],
+  );
+
   const handleTableauCardClick = useCallback(
     (pileIndex: number, cardIndex: number) => {
       const selected = gameState?.selected;
@@ -650,8 +962,7 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
 
   const renderCard = (card: Card, highlight = false) => {
     return (
-      <button
-        type="button"
+      <div
         className={`w-14 h-20 border-2 ${colorBorder[card.suit]} ${colorBg[card.suit]} ${colorText[card.suit]} rounded p-1 relative shadow ${highlight ? "ring-2 ring-yellow-300" : ""}`}
       >
         <div className="absolute top-1 left-1">
@@ -663,7 +974,7 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
         <span className="absolute inset-0 grid place-items-center text-xl font-bold leading-none">
           {card.rank}
         </span>
-      </button>
+      </div>
     );
   };
 
@@ -721,8 +1032,7 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
               {todaysDifficulty.maxPasses}.
             </div>
             <div className="mt-1">
-              Reward and Practice use the same daily difficulty, with a fresh
-              shuffle each run.
+              Reward runs use today's difficulty. Practice lets you choose.
             </div>
           </InnerPanel>
 
@@ -748,7 +1058,7 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
           </button>
 
           <button
-            onClick={() => startSession("practice")}
+            onClick={() => setShowPracticeDifficultyPrompt(true)}
             className="w-full px-6 py-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 active:scale-95 transition-all shadow-lg text-lg"
           >
             <div>START PRACTICE MODE</div>
@@ -798,6 +1108,53 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
               </div>
             </div>
           )}
+
+          {showPracticeDifficultyPrompt && (
+            <div className="fixed inset-0 z-30 bg-black/60 flex items-center justify-center p-4">
+              <div className="w-full max-w-md rounded border border-white/30 bg-slate-900 p-4 space-y-4 text-white">
+                <h3 className="text-lg font-bold">
+                  Select Practice Difficulty
+                </h3>
+                <p className="text-sm text-slate-200">
+                  Choose a difficulty to start practice mode.
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {SOLITAIRE_DIFFICULTIES.map((difficulty) => (
+                    <button
+                      key={difficulty.name}
+                      type="button"
+                      onClick={() => {
+                        setPracticeDifficultyName(difficulty.name);
+                        startSession("practice", difficulty.name);
+                      }}
+                      className={`px-3 py-2 rounded border text-xs font-semibold ${
+                        practiceDifficultyName === difficulty.name
+                          ? "bg-blue-600 text-white border-blue-700"
+                          : "bg-white text-slate-700 border-slate-300"
+                      }`}
+                    >
+                      {difficulty.label}
+                      <div className="mt-1 opacity-75">
+                        Draw {difficulty.drawCount} · {difficulty.maxPasses}{" "}
+                        redeals
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-slate-300">
+                  Reward runs still use today&apos;s difficulty (
+                  {todaysDifficulty.label}).
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    onClick={() => setShowPracticeDifficultyPrompt(false)}
+                  >
+                    CANCEL
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </OuterPanel>
     );
@@ -818,7 +1175,7 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
         <div className="max-w-7xl mx-auto h-full flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <div className="font-bold text-lg">
-              SOLITAIRE - {todaysDifficulty.label}
+              SOLITAIRE - {activeDifficulty.label}
             </div>
             <div className="flex gap-2 items-center">
               <span className="px-2 py-1 rounded bg-slate-700">
@@ -865,14 +1222,56 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
 
             <div className="space-y-1">
               <div className="text-xs uppercase text-slate-300">Waste</div>
-              <div onClick={selectWaste}>
-                {gameState.waste.length > 0
-                  ? renderCard(
-                      gameState.waste[gameState.waste.length - 1],
-                      gameState.selected?.source === "waste",
-                    )
-                  : renderCardBack()}
-              </div>
+              {activeDifficulty.drawCount === 3 ? (
+                <div
+                  className="relative"
+                  style={{ width: "92px", height: "80px" }}
+                  onClick={selectWaste}
+                >
+                  {gameState.waste.length === 0
+                    ? renderCardBack()
+                    : (() => {
+                        const visible = gameState.waste.slice(
+                          Math.max(0, gameState.waste.length - 3),
+                        );
+                        return visible.map((card, i) => {
+                          const isTop = i === visible.length - 1;
+                          return (
+                            <div
+                              key={card.rank + card.suit}
+                              className="absolute"
+                              style={{
+                                left: `${i * 32}px`,
+                                top: 0,
+                                pointerEvents: isTop ? "auto" : "none",
+                                zIndex: i,
+                              }}
+                              onDoubleClick={
+                                isTop ? () => smartMove("waste") : undefined
+                              }
+                            >
+                              {renderCard(
+                                card,
+                                isTop && gameState.selected?.source === "waste",
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+                </div>
+              ) : (
+                <div
+                  onClick={selectWaste}
+                  onDoubleClick={() => smartMove("waste")}
+                >
+                  {gameState.waste.length > 0
+                    ? renderCard(
+                        gameState.waste[gameState.waste.length - 1],
+                        gameState.selected?.source === "waste",
+                      )
+                    : renderCardBack()}
+                </div>
+              )}
             </div>
 
             {SUITS.map((suit) => {
@@ -967,6 +1366,10 @@ export const SolitaireGame: React.FC<{ onClose?: () => void }> = ({
                         onClick={(event) => {
                           event.stopPropagation();
                           handleTableauCardClick(pileIndex, upIndex);
+                        }}
+                        onDoubleClick={(event) => {
+                          event.stopPropagation();
+                          smartMove({ pileIndex, cardIndex: upIndex });
                         }}
                       >
                         {renderCard(card, isSelectedFromPile)}

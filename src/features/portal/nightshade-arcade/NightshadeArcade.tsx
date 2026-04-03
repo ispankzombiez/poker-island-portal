@@ -135,6 +135,14 @@ export const NightshadeArcade: React.FC = () => {
       setShowMinigameModal(true);
     });
 
+    const unsubscribeBarleyBreaker = minigamesEventEmitter.subscribe(
+      "barley-breaker",
+      () => {
+        setActiveMinigame("barley-breaker");
+        setShowMinigameModal(true);
+      },
+    );
+
     const unsubscribePacMan = minigamesEventEmitter.subscribe("pac-man", () => {
       setActiveMinigame("pac-man");
       setShowMinigameModal(true);
@@ -148,6 +156,7 @@ export const NightshadeArcade: React.FC = () => {
       unsubscribeSolitaire();
       unsubscribeGoblinInvaders();
       unsubscribeTetris();
+      unsubscribeBarleyBreaker();
       unsubscribePacMan();
     };
   }, []);

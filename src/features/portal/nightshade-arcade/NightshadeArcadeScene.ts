@@ -123,6 +123,10 @@ export class NightshadeArcadeScene extends BaseScene {
                 if (machineName === "machine 8") {
                   minigamesEventEmitter.emit({ type: "pac-man" });
                 }
+
+                if (machineName === "machine 9") {
+                  minigamesEventEmitter.emit({ type: "barley-breaker" });
+                }
               }
             });
         }

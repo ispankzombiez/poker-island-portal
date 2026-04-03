@@ -7,6 +7,7 @@ export const NIGHTSHADE_ARCADE_MINIGAMES: MinigameName[] = [
   "gofish",
   "roulette",
   "slots",
+  "barley-breaker" as MinigameName,
   "uno",
   "solitaire" as MinigameName,
   "goblin-invaders" as MinigameName,

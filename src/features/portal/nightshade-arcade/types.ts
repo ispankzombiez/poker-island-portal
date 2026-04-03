@@ -9,6 +9,7 @@ export type PortalGameState = GameState;
 export type MinigameName =
   | "poker"
   | "slots"
+  | "barley-breaker"
   | "blackjack"
   | "roulette"
   | "gofish"

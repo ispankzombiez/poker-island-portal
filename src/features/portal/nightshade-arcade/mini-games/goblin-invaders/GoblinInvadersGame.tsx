@@ -42,19 +42,32 @@ import {
 const _portalState = (state: PortalMachineState) => state.context.state;
 
 const ARENA_WIDTH = 760;
-const ARENA_HEIGHT = 420;
+const ARENA_HEIGHT = 560;
 const PLAYER_Y = ARENA_HEIGHT - 48;
 const PLAYER_SPEED = 420;
 const PLAYER_SIZE = 42;
 const PLAYER_SHOT_SPEED = 620;
 const ENEMY_SHOT_SPEED = 260;
-const ENEMY_ROWS = 4;
-const ENEMY_COLS = 6;
+const ENEMY_ROWS = 5;
+const ENEMY_COLS = 11;
 const ENEMY_WIDTH = 34;
 const ENEMY_HEIGHT = 34;
-const ENEMY_POINTS = 10;
-const ENEMY_DIRECTION_SWITCH_SPEED_BOOST = 2;
-const ENEMY_DIRECTION_SWITCH_SPEED_CAP = 36;
+const ENEMY_POINTS_LOW = 10;
+const ENEMY_POINTS_MID = 20;
+const ENEMY_POINTS_TOP = 30;
+const ENEMY_STEP_DISTANCE = 12;
+const ENEMY_DROP_DISTANCE = 18;
+const ENEMY_STEP_INTERVAL_MIN_MS = 70;
+const ENEMY_MAX_ACTIVE_SHOTS = 3;
+const SHIELD_COUNT = 4;
+const SHIELD_CELL_SIZE = 6;
+const SHIELD_CELL_HP = 3;
+const MYSTERY_SHIP_WIDTH = 52;
+const MYSTERY_SHIP_HEIGHT = 30;
+const MYSTERY_SHIP_SPEED = 110;
+const MYSTERY_SHIP_Y = 18;
+const MYSTERY_SHIP_RESPAWN_MIN_MS = 9000;
+const MYSTERY_SHIP_RESPAWN_MAX_MS = 16000;
 const LIFE_LOSS_PAUSE_MS = 1800;
 const PLAYER_BLINK_INTERVAL_MS = 120;
 
@@ -78,7 +91,23 @@ type Enemy = {
   id: number;
   x: number;
   y: number;
+  row: number;
+  col: number;
   alive: boolean;
+};
+
+type ShieldCell = {
+  id: number;
+  x: number;
+  y: number;
+  hp: number;
+};
+
+type MysteryShip = {
+  active: boolean;
+  x: number;
+  direction: 1 | -1;
+  respawnMs: number;
 };
 
 type GoblinInvadersRuntime = {
@@ -89,8 +118,10 @@ type GoblinInvadersRuntime = {
   enemies: Enemy[];
   playerShots: Projectile[];
   enemyShots: Projectile[];
+  shieldCells: ShieldCell[];
+  mysteryShip: MysteryShip;
   enemyDirection: 1 | -1;
-  enemySpeedBonus: number;
+  enemyStepTimerMs: number;
   respawnPauseMs: number;
   enemyFireCooldownMs: number;
   shotCooldownMs: number;
@@ -180,10 +211,11 @@ const buildArenaBackgroundDataUrl = (
 };
 
 const createWaveEnemies = (wave: number): Enemy[] => {
-  const xStart = 90;
-  const yStart = 54;
-  const xGap = 92;
-  const yGap = 56;
+  const xGap = 58;
+  const yGap = 42;
+  const formationWidth = ENEMY_WIDTH + (ENEMY_COLS - 1) * xGap;
+  const xStart = Math.floor((ARENA_WIDTH - formationWidth) / 2);
+  const yStart = 46 + Math.min(70, (wave - 1) * 10);
   let id = wave * 1000;
 
   const enemies: Enemy[] = [];
@@ -194,6 +226,8 @@ const createWaveEnemies = (wave: number): Enemy[] => {
         id: id++,
         x: xStart + col * xGap,
         y: yStart + row * yGap,
+        row,
+        col,
         alive: true,
       });
     }
@@ -201,6 +235,63 @@ const createWaveEnemies = (wave: number): Enemy[] => {
 
   return enemies;
 };
+
+const createShieldCells = (): ShieldCell[] => {
+  const cells: ShieldCell[] = [];
+  const shieldCols = 14;
+  const shieldRows = 8;
+  const shieldWidth = shieldCols * SHIELD_CELL_SIZE;
+  const totalShieldWidth = SHIELD_COUNT * shieldWidth;
+  const spacing = Math.floor(
+    (ARENA_WIDTH - totalShieldWidth) / (SHIELD_COUNT + 1),
+  );
+  const top = PLAYER_Y - 94;
+  let id = 1;
+
+  for (let shieldIndex = 0; shieldIndex < SHIELD_COUNT; shieldIndex++) {
+    const left = spacing + shieldIndex * (shieldWidth + spacing);
+
+    for (let row = 0; row < shieldRows; row++) {
+      for (let col = 0; col < shieldCols; col++) {
+        const outsideTopCorners =
+          row === 0 && (col < 2 || col > shieldCols - 3);
+        const notch = row >= shieldRows - 2 && col >= 5 && col <= 8;
+        const thinBottomCorners =
+          row === shieldRows - 1 && (col <= 2 || col >= 11);
+
+        if (outsideTopCorners || notch || thinBottomCorners) {
+          continue;
+        }
+
+        cells.push({
+          id: id++,
+          x: left + col * SHIELD_CELL_SIZE,
+          y: top + row * SHIELD_CELL_SIZE,
+          hp: SHIELD_CELL_HP,
+        });
+      }
+    }
+  }
+
+  return cells;
+};
+
+const getMysteryShipRespawnMs = () => {
+  return (
+    MYSTERY_SHIP_RESPAWN_MIN_MS +
+    Math.floor(
+      Math.random() *
+        (MYSTERY_SHIP_RESPAWN_MAX_MS - MYSTERY_SHIP_RESPAWN_MIN_MS),
+    )
+  );
+};
+
+const createMysteryShip = (): MysteryShip => ({
+  active: false,
+  x: -MYSTERY_SHIP_WIDTH,
+  direction: 1,
+  respawnMs: getMysteryShipRespawnMs(),
+});
 
 const createInitialRuntime = (): GoblinInvadersRuntime => ({
   playerX: ARENA_WIDTH / 2 - PLAYER_SIZE / 2,
@@ -210,8 +301,10 @@ const createInitialRuntime = (): GoblinInvadersRuntime => ({
   enemies: createWaveEnemies(1),
   playerShots: [],
   enemyShots: [],
+  shieldCells: createShieldCells(),
+  mysteryShip: createMysteryShip(),
   enemyDirection: 1,
-  enemySpeedBonus: 0,
+  enemyStepTimerMs: 0,
   respawnPauseMs: 0,
   enemyFireCooldownMs: 0,
   shotCooldownMs: 0,
@@ -221,6 +314,32 @@ const createInitialRuntime = (): GoblinInvadersRuntime => ({
 
 const clamp = (value: number, min: number, max: number) => {
   return Math.max(min, Math.min(max, value));
+};
+
+const getEnemyPoints = (row: number) => {
+  if (row === 0) return ENEMY_POINTS_TOP;
+  if (row <= 2) return ENEMY_POINTS_MID;
+  return ENEMY_POINTS_LOW;
+};
+
+const getMysteryShipPoints = () => {
+  const values = [50, 100, 150, 300];
+  return values[Math.floor(Math.random() * values.length)];
+};
+
+const getBottomShooters = (enemies: Enemy[]) => {
+  const bottomByColumn = new Map<number, Enemy>();
+
+  for (const enemy of enemies) {
+    if (!enemy.alive) continue;
+
+    const existing = bottomByColumn.get(enemy.col);
+    if (!existing || enemy.row > existing.row) {
+      bottomByColumn.set(enemy.col, enemy);
+    }
+  }
+
+  return Array.from(bottomByColumn.values());
 };
 
 export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
@@ -321,7 +440,7 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
 
       const shot: Projectile = {
         id: Date.now() + Math.floor(Math.random() * 10000),
-        x: previous.playerX + PLAYER_SIZE / 2 - 6,
+        x: previous.playerX + PLAYER_SIZE / 2 - 2,
         y: PLAYER_Y - 8,
         vx: 0,
         vy: -PLAYER_SHOT_SPEED,
@@ -412,49 +531,113 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
       if (rightPressed) playerX += PLAYER_SPEED * dt;
       playerX = clamp(playerX, 0, ARENA_WIDTH - PLAYER_SIZE);
 
+      let shieldCells = previous.shieldCells;
+      let mysteryShip = previous.mysteryShip;
+
       const aliveEnemies = previous.enemies.filter((enemy) => enemy.alive);
       const aliveCount = aliveEnemies.length;
       const defeatedCount = previous.enemies.length - aliveCount;
-      let enemySpeedBonus = previous.enemySpeedBonus;
-      const progressiveDefeatBoost = defeatedCount * 3;
-      const finalEnemyBoost = aliveCount <= 1 ? 72 : aliveCount <= 3 ? 30 : 0;
-      const enemySpeed =
-        activeDifficulty.baseEnemySpeed +
-        previous.wave * 18 +
-        progressiveDefeatBoost +
-        finalEnemyBoost +
-        enemySpeedBonus;
-
       let enemyDirection = previous.enemyDirection;
-      let enemies = previous.enemies.map((enemy) => {
-        if (!enemy.alive) return enemy;
+      let enemyStepTimerMs = previous.enemyStepTimerMs + dtMs;
 
-        return {
-          ...enemy,
-          x: enemy.x + enemyDirection * enemySpeed * dt,
-        };
-      });
+      const lowestEnemyY = aliveEnemies.reduce((maximum, enemy) => {
+        return Math.max(maximum, enemy.y + ENEMY_HEIGHT);
+      }, 0);
+      const descentPressure = Math.max(0, (lowestEnemyY - 180) / 8);
 
-      const aliveAfterMove = enemies.filter((enemy) => enemy.alive);
-      const touchedWall = aliveAfterMove.some(
-        (enemy) => enemy.x <= 8 || enemy.x + ENEMY_WIDTH >= ARENA_WIDTH - 8,
+      const stepIntervalMs = clamp(
+        1080 -
+          activeDifficulty.baseEnemySpeed * 7 -
+          (previous.wave - 1) * 70 -
+          defeatedCount * 10 -
+          descentPressure,
+        ENEMY_STEP_INTERVAL_MIN_MS,
+        1000,
       );
 
-      if (touchedWall) {
-        enemyDirection = enemyDirection === 1 ? -1 : 1;
-        enemySpeedBonus = Math.min(
-          ENEMY_DIRECTION_SWITCH_SPEED_CAP,
-          enemySpeedBonus + ENEMY_DIRECTION_SWITCH_SPEED_BOOST,
-        );
+      let enemies = previous.enemies;
+
+      // Space Invaders style movement: formation advances in timed steps.
+      while (enemyStepTimerMs >= stepIntervalMs) {
+        enemyStepTimerMs -= stepIntervalMs;
+
+        const aliveNow = enemies.filter((enemy) => enemy.alive);
+        const willTouchWall = aliveNow.some((enemy) => {
+          const nextX = enemy.x + enemyDirection * ENEMY_STEP_DISTANCE;
+          return nextX <= 8 || nextX + ENEMY_WIDTH >= ARENA_WIDTH - 8;
+        });
+
+        if (willTouchWall) {
+          enemyDirection = enemyDirection === 1 ? -1 : 1;
+          enemies = enemies.map((enemy) => {
+            if (!enemy.alive) return enemy;
+
+            return {
+              ...enemy,
+              y: enemy.y + ENEMY_DROP_DISTANCE,
+            };
+          });
+          continue;
+        }
+
         enemies = enemies.map((enemy) => {
           if (!enemy.alive) return enemy;
 
           return {
             ...enemy,
-            x: enemy.x + enemyDirection * 8,
-            y: enemy.y + 18,
+            x: enemy.x + enemyDirection * ENEMY_STEP_DISTANCE,
           };
         });
+      }
+
+      // Invaders chew through shields when they descend into them.
+      shieldCells = shieldCells.filter((cell) => {
+        return !enemies.some(
+          (enemy) =>
+            enemy.alive &&
+            cell.x < enemy.x + ENEMY_WIDTH &&
+            cell.x + SHIELD_CELL_SIZE > enemy.x &&
+            cell.y < enemy.y + ENEMY_HEIGHT &&
+            cell.y + SHIELD_CELL_SIZE > enemy.y,
+        );
+      });
+
+      if (mysteryShip.active) {
+        const nextX =
+          mysteryShip.x + mysteryShip.direction * MYSTERY_SHIP_SPEED * dt;
+        const outOfBounds =
+          (mysteryShip.direction === 1 &&
+            nextX > ARENA_WIDTH + MYSTERY_SHIP_WIDTH) ||
+          (mysteryShip.direction === -1 &&
+            nextX + MYSTERY_SHIP_WIDTH < -MYSTERY_SHIP_WIDTH);
+
+        mysteryShip = outOfBounds
+          ? {
+              active: false,
+              x: -MYSTERY_SHIP_WIDTH,
+              direction: 1,
+              respawnMs: getMysteryShipRespawnMs(),
+            }
+          : {
+              ...mysteryShip,
+              x: nextX,
+            };
+      } else {
+        const respawnMs = mysteryShip.respawnMs - dtMs;
+        if (respawnMs <= 0) {
+          const direction: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
+          mysteryShip = {
+            active: true,
+            direction,
+            x: direction === 1 ? -MYSTERY_SHIP_WIDTH : ARENA_WIDTH,
+            respawnMs: getMysteryShipRespawnMs(),
+          };
+        } else {
+          mysteryShip = {
+            ...mysteryShip,
+            respawnMs,
+          };
+        }
       }
 
       const enemyReachedPlayer = enemies.some(
@@ -482,6 +665,29 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
           shot.x < ARENA_WIDTH + 30,
       );
 
+      // Classic Space Invaders: player shot cancels enemy shots on contact.
+      const cancelledPlayerShots = new Set<number>();
+      const cancelledEnemyShots = new Set<number>();
+      for (const pShot of playerShots) {
+        for (const eShot of enemyShots) {
+          const collides =
+            pShot.x < eShot.x + 14 &&
+            pShot.x + 4 > eShot.x &&
+            pShot.y < eShot.y + 20 &&
+            pShot.y + 18 > eShot.y;
+          if (collides) {
+            cancelledPlayerShots.add(pShot.id);
+            cancelledEnemyShots.add(eShot.id);
+          }
+        }
+      }
+      if (cancelledPlayerShots.size > 0) {
+        playerShots = playerShots.filter(
+          (s) => !cancelledPlayerShots.has(s.id),
+        );
+        enemyShots = enemyShots.filter((s) => !cancelledEnemyShots.has(s.id));
+      }
+
       let score = previous.score;
 
       const aliveEnemyMap = new Map<number, Enemy>();
@@ -496,6 +702,52 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
       for (const shot of playerShots) {
         let hit = false;
 
+        for (const cell of shieldCells) {
+          const intersectsShield =
+            shot.x < cell.x + SHIELD_CELL_SIZE &&
+            shot.x + 12 > cell.x &&
+            shot.y < cell.y + SHIELD_CELL_SIZE &&
+            shot.y + 16 > cell.y;
+
+          if (!intersectsShield) continue;
+
+          hit = true;
+          shieldCells = shieldCells
+            .map((shieldCell) => {
+              if (shieldCell.id !== cell.id) return shieldCell;
+              return {
+                ...shieldCell,
+                hp: shieldCell.hp - 1,
+              };
+            })
+            .filter((shieldCell) => shieldCell.hp > 0);
+          break;
+        }
+
+        if (hit) {
+          continue;
+        }
+
+        if (mysteryShip.active) {
+          const hitMysteryShip =
+            shot.x < mysteryShip.x + MYSTERY_SHIP_WIDTH &&
+            shot.x + 12 > mysteryShip.x &&
+            shot.y < MYSTERY_SHIP_Y + MYSTERY_SHIP_HEIGHT &&
+            shot.y + 16 > MYSTERY_SHIP_Y;
+
+          if (hitMysteryShip) {
+            hit = true;
+            score += getMysteryShipPoints();
+            mysteryShip = {
+              active: false,
+              x: -MYSTERY_SHIP_WIDTH,
+              direction: 1,
+              respawnMs: getMysteryShipRespawnMs(),
+            };
+            continue;
+          }
+        }
+
         for (const enemy of aliveEnemyMap.values()) {
           const intersects =
             shot.x < enemy.x + ENEMY_WIDTH &&
@@ -506,7 +758,7 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
           if (intersects) {
             hit = true;
             aliveEnemyMap.delete(enemy.id);
-            score += ENEMY_POINTS;
+            score += getEnemyPoints(enemy.row);
             break;
           }
         }
@@ -530,6 +782,33 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
           continue;
         }
 
+        let absorbedByShield = false;
+        for (const cell of shieldCells) {
+          const intersectsShield =
+            shot.x < cell.x + SHIELD_CELL_SIZE &&
+            shot.x + 12 > cell.x &&
+            shot.y < cell.y + SHIELD_CELL_SIZE &&
+            shot.y + 16 > cell.y;
+
+          if (!intersectsShield) continue;
+
+          shieldCells = shieldCells
+            .map((shieldCell) => {
+              if (shieldCell.id !== cell.id) return shieldCell;
+              return {
+                ...shieldCell,
+                hp: shieldCell.hp - 1,
+              };
+            })
+            .filter((shieldCell) => shieldCell.hp > 0);
+          absorbedByShield = true;
+          break;
+        }
+
+        if (absorbedByShield) {
+          continue;
+        }
+
         const hitPlayer =
           shot.x < playerX + PLAYER_SIZE &&
           shot.x + 12 > playerX &&
@@ -547,12 +826,17 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
 
       let enemyFireCooldownMs = previous.enemyFireCooldownMs + dtMs;
       const fireInterval = Math.max(
-        320,
-        activeDifficulty.baseEnemyFireMs - previous.wave * 100,
+        180,
+        activeDifficulty.baseEnemyFireMs -
+          previous.wave * 100 -
+          defeatedCount * 10,
       );
 
-      if (enemyFireCooldownMs >= fireInterval) {
-        const fireCandidates = enemies.filter((enemy) => enemy.alive);
+      if (
+        enemyFireCooldownMs >= fireInterval &&
+        survivingEnemyShots.length < ENEMY_MAX_ACTIVE_SHOTS
+      ) {
+        const fireCandidates = getBottomShooters(enemies);
 
         if (fireCandidates.length > 0) {
           const source =
@@ -575,7 +859,8 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
       if (allEnemiesCleared && score < activeDifficulty.targetScore) {
         wave += 1;
         enemies = createWaveEnemies(wave);
-        enemySpeedBonus = 0;
+        shieldCells = createShieldCells();
+        enemyStepTimerMs = 0;
       }
 
       const won = score >= activeDifficulty.targetScore;
@@ -606,8 +891,10 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
         enemies,
         playerShots: survivingPlayerShots,
         enemyShots: tookHit ? [] : survivingEnemyShots,
+        shieldCells,
+        mysteryShip,
         enemyDirection,
-        enemySpeedBonus,
+        enemyStepTimerMs,
         respawnPauseMs,
         enemyFireCooldownMs,
         shotCooldownMs: Math.max(0, previous.shotCooldownMs - dtMs),
@@ -870,6 +1157,22 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
               backgroundPosition: "center",
             }}
           >
+            {runtime.mysteryShip.active && (
+              <img
+                src={SUNNYSIDE.npcs.goblin}
+                className="absolute"
+                style={{
+                  width: `${MYSTERY_SHIP_WIDTH}px`,
+                  height: `${MYSTERY_SHIP_HEIGHT}px`,
+                  left: `${runtime.mysteryShip.x}px`,
+                  top: `${MYSTERY_SHIP_Y}px`,
+                  imageRendering: "pixelated",
+                  filter: "hue-rotate(250deg) saturate(160%) brightness(1.3)",
+                }}
+                alt="Mystery ship"
+              />
+            )}
+
             {runtime.enemies
               .filter((enemy) => enemy.alive)
               .map((enemy) => (
@@ -888,19 +1191,40 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
                 />
               ))}
 
-            {runtime.playerShots.map((shot) => (
-              <img
-                key={shot.id}
-                src={ITEM_DETAILS.Potato.image}
+            {runtime.shieldCells.map((cell) => (
+              <div
+                key={cell.id}
                 className="absolute"
                 style={{
-                  width: "14px",
-                  height: "14px",
+                  width: `${SHIELD_CELL_SIZE}px`,
+                  height: `${SHIELD_CELL_SIZE}px`,
+                  left: `${cell.x}px`,
+                  top: `${cell.y}px`,
+                  background:
+                    cell.hp === 3
+                      ? "#86efac"
+                      : cell.hp === 2
+                        ? "#4ade80"
+                        : "#16a34a",
+                  boxShadow: "inset 0 0 0 1px rgba(2, 6, 23, 0.35)",
+                }}
+              />
+            ))}
+
+            {runtime.playerShots.map((shot) => (
+              <div
+                key={shot.id}
+                className="absolute"
+                style={{
+                  width: "4px",
+                  height: "18px",
                   left: `${shot.x}px`,
                   top: `${shot.y}px`,
-                  imageRendering: "pixelated",
+                  background:
+                    "linear-gradient(180deg, #ffffff 0%, #ffe066 40%, #ff8800 100%)",
+                  borderRadius: "2px",
+                  boxShadow: "0 0 5px 2px rgba(255, 210, 60, 0.8)",
                 }}
-                alt="Player projectile"
               />
             ))}
 
@@ -974,7 +1298,8 @@ export const GoblinInvadersGame: React.FC<{ onClose?: () => void }> = ({
 
           <div className="text-xs text-slate-300">
             Move with A/D or Arrow keys. Press Space to shoot. Enemy speed and
-            fire rate increase as waves progress.
+            fire rate increase as waves progress. Use shields for cover and
+            shoot the mystery ship for bonus points.
           </div>
 
           {showExitConfirm && (

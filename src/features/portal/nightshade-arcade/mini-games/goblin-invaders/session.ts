@@ -1,8 +1,5 @@
 import { GameState } from "features/game/types/game";
-import {
-  getTodayKey,
-  isRewardRunAvailableForMinigame,
-} from "../poker/session";
+import { getTodayKey, isRewardRunAvailableForMinigame } from "../poker/session";
 
 export const GOBLIN_INVADERS_RAVEN_COIN_REWARD = 1;
 
@@ -19,18 +16,18 @@ export type GoblinInvadersDifficulty = {
   weight: number;
 };
 
-const FIRST_WAVE_CLEAR_SCORE = 24 * 10;
-const MEDIUM_TARGET_SCORE = FIRST_WAVE_CLEAR_SCORE * 2;
-const HARD_TARGET_SCORE = MEDIUM_TARGET_SCORE * 2;
+const EASY_TARGET_SCORE = 1200;
+const MEDIUM_TARGET_SCORE = 2400;
+const HARD_TARGET_SCORE = 3800;
 
 export const GOBLIN_INVADERS_DIFFICULTIES: GoblinInvadersDifficulty[] = [
   {
     name: "easy",
     label: "Easy",
-    targetScore: FIRST_WAVE_CLEAR_SCORE,
+    targetScore: EASY_TARGET_SCORE,
     maxWaves: 2,
-    baseEnemySpeed: 38,
-    baseEnemyFireMs: 1700,
+    baseEnemySpeed: 40,
+    baseEnemyFireMs: 1500,
     weight: 3,
   },
   {
@@ -38,8 +35,8 @@ export const GOBLIN_INVADERS_DIFFICULTIES: GoblinInvadersDifficulty[] = [
     label: "Medium",
     targetScore: MEDIUM_TARGET_SCORE,
     maxWaves: 3,
-    baseEnemySpeed: 52,
-    baseEnemyFireMs: 1400,
+    baseEnemySpeed: 56,
+    baseEnemyFireMs: 1250,
     weight: 3,
   },
   {
@@ -47,8 +44,8 @@ export const GOBLIN_INVADERS_DIFFICULTIES: GoblinInvadersDifficulty[] = [
     label: "Hard",
     targetScore: HARD_TARGET_SCORE,
     maxWaves: 5,
-    baseEnemySpeed: 66,
-    baseEnemyFireMs: 1100,
+    baseEnemySpeed: 72,
+    baseEnemyFireMs: 1000,
     weight: 2,
   },
 ];
